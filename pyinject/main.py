@@ -93,7 +93,6 @@ def runtime_cast(val: object, to_type: type[T], name: str) -> T:
     Raises:
         TypeConversionError: If the value cannot be converted to the target type
     """
-    print("***********************************", val)
     try:
         return p.TypeAdapter(to_type).validate_python(val)
     except p.ValidationError as val_err:
@@ -111,7 +110,7 @@ def runtime_cast(val: object, to_type: type[T], name: str) -> T:
 
         ) from val_err
 
-def dep(func: t.Callable[P, R]):
+def dep(func: t.Callable[P, R]) -> t.Callable[P, T]:
     """
     Decorator that marks a function as a dependency provider.
     
@@ -137,14 +136,16 @@ def dep(func: t.Callable[P, R]):
 
     return injector_factory
 
+
+
+
 def inject(func: t.Callable[P, R]) -> t.Callable[P, R]:
 
     params = inspect.signature(func).parameters
 
-    @functools.wraps(func)
+    # @functools.wraps(func)
     def wrapper(*args: P.args, **kwargs: P.kwargs) -> R:
 
-        print("**************")
 
         for name, param in params.items():
 
@@ -166,11 +167,10 @@ def inject(func: t.Callable[P, R]) -> t.Callable[P, R]:
                 kwargs[name] = raw_value
                 continue
             
-            if not is_class(expected_type):
-                raise 
+            # if not is_class(expected_type):
+            #     raise RuntimeError
 
 
-            print(f"{raw_value=}")
 
             kwargs[name] = runtime_cast(
                 val = raw_value,
@@ -179,6 +179,7 @@ def inject(func: t.Callable[P, R]) -> t.Callable[P, R]:
             )
 
         return func(*args, **kwargs)
+
     return wrapper
 
 
