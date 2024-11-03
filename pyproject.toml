@@ -2,7 +2,7 @@
 name = "pyinject"
 version = "0.0.1"
 description = ""
-authors = ["Your Name <you@example.com>"]
+authors = ["Rui Campos <mail@ruicampos.org>"]
 readme = "README.md"
 
 [tool.poetry.dependencies]
