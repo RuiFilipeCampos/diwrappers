@@ -23,10 +23,15 @@ def throw_coin(random_int: int) -> t.Literal["heads", "tails"]:
 ## non-contextual singleton injection
 
 ```py
+from functools import cache
+import pydantic as p
+import os
+
 @dependency
 @cache
 def token() -> p.SecretStr:
-    return p.SecretStr("fake_api_token")
+    api_token = os.environ["api_token"]
+    return p.SecretStr(api_token)
 
 @token.inject
 def build_http_headers(token: p.SecretStr):
