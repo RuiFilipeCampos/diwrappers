@@ -132,3 +132,9 @@ with fake_random():
     assert result.user_id in (0, 1, 2)
 ```
 
+
+# Soon
+
+## contextual dependency injection (allowing scoped session, scoped request, etc)
+
+## async support
