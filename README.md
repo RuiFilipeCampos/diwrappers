@@ -1,13 +1,10 @@
+# Examples 
+
+## non-contextual transient injection
+
 ```py
 
-
 from diwrappers import dependency
-
-# NOTE: EXAMPLES 
-
-
-# NOTE: non-contextual transient injection
-
 import random
 
 @dependency
@@ -21,10 +18,11 @@ def throw_coin(random_int: int) -> t.Literal["heads", "tails"]:
         return "heads"
     else:
         return "tails"
+```
 
+## non-contextual singleton injection
 
-# NOTE: non-contextual singleton injection
-
+```py
 @dependency
 @cache
 def token() -> p.SecretStr:
@@ -35,10 +33,12 @@ def build_http_headers(token: p.SecretStr):
     return {
         "Authorization": f"Bearer {token.get_secret_value()}"
     }
+```
 
 
-# chaining injections
 
+## chaining injections
+```py
 import requests
 class User(p.BaseModel):
     user_id: int
@@ -75,28 +75,12 @@ def get_random_user(
     response.raise_for_status()
     return p.TypeAdapter(User).validate_json(response.text)
 
-
-# NOTE: testing
-
-with (
-    random_int.fake_value(1234) as fake_int,
-    token.fake_value("token_for_test_server"),
-    api_base_url.fake_value("http://localhost:8000"),
-):
-    result = get_random_user(name="test_user")
-    assert result.user_id == fake_int
-
-@random_int.faker
-def fake_random():
-    return random.randint(0, 2)
-
-with fake_random():
-    result = get_random_user(name="test_user")
-    assert result.user_id in (0, 1, 2)
+```
 
 
-# chaining dependencies
+## chaining dependencies
 
+```py
 @dependency
 @token.inject
 def client(token: p.SecretStr):
@@ -106,10 +90,11 @@ def client(token: p.SecretStr):
 @client.inject
 def task_using_client(client: str):
     print(client)
+```
 
+## framework integration (in this case, FastAPI)
 
-# NOTE: framework integration (in this case, FastAPI)
-
+```py
 @dependency
 def db_token():
     return "fake_db_token"
@@ -119,3 +104,31 @@ def db_token():
 def read_items(db_token: str):
     return {"message": f"Will connect using to {db_token}"}
 ```
+
+
+## testing
+
+### built in context manager for faking constants
+
+```py
+with (
+    random_int.fake_value(1234) as fake_int,
+    token.fake_value("token_for_test_server"),
+    api_base_url.fake_value("http://localhost:8000"),
+):
+    result = get_random_user(name="test_user")
+    assert result.user_id == fake_int
+```
+
+### construct fake data dynamically
+
+```py
+@random_int.faker
+def fake_random():
+    return random.randint(0, 2)
+
+with fake_random():
+    result = get_random_user(name="test_user")
+    assert result.user_id in (0, 1, 2)
+```
+
