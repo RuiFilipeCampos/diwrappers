@@ -11,7 +11,15 @@ python = "^3.12"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.3.4"
+poethepoet = "^0.32.0"
+basedpyright = "^1.23.2"
 
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
+
+[tool.poe.tasks.test]
+cmd = "pytest diwrappers/*.py -vvvvv"
+
+[tool.poe.tasks.lint]
+cmd = "basedpyright diwrappers/*.py --level warning"
