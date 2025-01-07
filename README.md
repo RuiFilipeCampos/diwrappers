@@ -1,145 +1,178 @@
-# Examples 
+# DIWrappers
 
-## non-contextual transient injection
+A lightweight, intuitive dependency injection library for Python that makes testing and dependency management a breeze.
 
-```py
+## Features
 
+- Simple decorator-based dependency injection
+- Built-in support for singleton and transient dependencies
+- Seamless integration with popular frameworks like FastAPI
+- Powerful testing utilities with context managers
+- Type hint friendly with full Pydantic support
+
+## Installation
+
+```bash
+pip install diwrappers
+```
+
+## Quick Start
+
+Here's a simple example showing how to inject a configuration dependency:
+
+```python
+from diwrappers import dependency
+from pydantic import SecretStr
+import os
+
+@dependency
+def api_token() -> SecretStr:
+    return SecretStr(os.environ["API_TOKEN"])
+
+@api_token.inject
+def send_request(api_token: SecretStr):
+    return f"Sending request with token: {api_token.get_secret_value()}"
+```
+
+## Core Concepts
+
+### Dependency Types
+
+#### Transient Dependencies
+
+Transient dependencies are created each time they're requested. Perfect for generating random values or creating new instances:
+
+```python
 from diwrappers import dependency
 import random
 
 @dependency
-def random_int():
+def random_number():
     return random.randint(1, 10)
 
-
-@random_int.inject
-def throw_coin(random_int: int) -> t.Literal["heads", "tails"]:
-    if random_int <= 5:
-        return "heads"
-    else:
-        return "tails"
+@random_number.inject
+def play_game(random_number: int) -> str:
+    return "win" if random_number > 5 else "lose"
 ```
 
-## non-contextual singleton injection
+#### Singleton Dependencies
 
-```py
+Singleton dependencies are created once and reused. Ideal for database connections, configuration, or API clients:
+
+```python
 from functools import cache
-import pydantic as p
-import os
+from pydantic import HttpUrl
 
 @dependency
-@cache
-def token() -> p.SecretStr:
-    api_token = os.environ["api_token"]
-    return p.SecretStr(api_token)
-
-@token.inject
-def build_http_headers(token: p.SecretStr):
-    return {
-        "Authorization": f"Bearer {token.get_secret_value()}"
-    }
-```
-
-
-
-## chaining injections
-```py
-import requests
-class User(p.BaseModel):
-    user_id: int
-    name: str
-
-@dependency
-@cache
+@cache  # Makes this a singleton
 def api_base_url():
-    return p.HttpUrl("http://base-url-of-your-app")
-
-@random_int.inject
-@token.inject
-@api_base_url.inject
-def get_random_user(
-    # injections
-    base_url: p.HttpUrl,
-    token: p.SecretStr,
-    random_int: int,
-
-    # call signature
-    name: str
-):
-
-    response = requests.get(
-        url= base_url.unicode_string() + "/user",
-        json={
-            "user_id": random_int,
-            "name": name
-        },
-        headers={
-            "authorization": f"Bearer {token.get_secret_value()}"
-        }
-    )
-    response.raise_for_status()
-    return p.TypeAdapter(User).validate_json(response.text)
-
+    return HttpUrl("https://api.example.com")
 ```
 
+### Chaining Dependencies
 
-## chaining dependencies
+Dependencies can be chained together to build complex injection hierarchies:
 
-```py
+```python
 @dependency
-@token.inject
-def client(token: p.SecretStr):
-    print(token)
-    return "client"
+def database():
+    return Database("connection_string")
 
-@client.inject
-def task_using_client(client: str):
-    print(client)
-```
-
-## framework integration (in this case, FastAPI)
-
-```py
 @dependency
-def db_token():
-    return "fake_db_token"
+@database.inject
+def user_repository(database: Database):
+    return UserRepository(database)
 
-@app.get("/items/")
-@db_token.inject
-def read_items(db_token: str):
-    return {"message": f"Will connect using to {db_token}"}
+@user_repository.inject
+def get_user(user_repository: UserRepository, user_id: int):
+    return user_repository.get_user(user_id)
 ```
 
+### Framework Integration
 
-## testing
+DIWrappers works seamlessly with popular frameworks like FastAPI:
 
-### built in context manager for faking constants
+```python
+from fastapi import FastAPI
+from diwrappers import dependency
 
-```py
-with (
-    random_int.fake_value(1234) as fake_int,
-    token.fake_value("token_for_test_server"),
-    api_base_url.fake_value("http://localhost:8000"),
-):
-    result = get_random_user(name="test_user")
-    assert result.user_id == fake_int
+app = FastAPI()
+
+@dependency
+def db_connection():
+    return "database_connection"
+
+@app.get("/users/{user_id}")
+@db_connection.inject
+def get_user(user_id: int, db_connection: str):
+    return {"user_id": user_id, "connection": db_connection}
 ```
 
-### construct fake data dynamically
+## Testing
 
-```py
-@random_int.faker
-def fake_random():
-    return random.randint(0, 2)
+DIWrappers provides powerful utilities for testing injected dependencies:
 
-with fake_random():
-    result = get_random_user(name="test_user")
-    assert result.user_id in (0, 1, 2)
+### Using Context Managers
+
+```python
+@dependency
+def api_key():
+    return "production_key"
+
+@api_key.inject
+def make_request(api_key: str):
+    return f"Request with {api_key}"
+
+def test_make_request():
+    with api_key.fake_value("test_key"):
+        assert make_request() == "Request with test_key"
 ```
 
+### Dynamic Fake Data
 
-# Soon
+Create dynamic fake data for more complex testing scenarios:
 
-## contextual dependency injection (allowing scoped session, scoped request, etc)
+```python
+@dependency
+def user_id():
+    return get_current_user_id()
 
-## async support
+@user_id.faker
+def fake_user_id():
+    return random.randint(1000, 9999)
+
+def test_with_random_users():
+    with fake_user_id():
+        result = get_user_data()
+        assert 1000 <= result.user_id <= 9999
+```
+
+### Multiple Fakes
+
+Chain multiple fake dependencies in a single test:
+
+```python
+def test_complex_scenario():
+    with (
+        api_key.fake_value("test_key"),
+        database.fake_value(MockDatabase()),
+        user_id.fake_value(12345)
+    ):
+        result = perform_operation()
+        assert result.success
+```
+
+## Coming Soon
+
+- Contextual dependency injection (request-scoped, session-scoped)
+- Async support
+- Container lifecycle management
+- Enhanced framework integrations
+
+## Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+## License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
