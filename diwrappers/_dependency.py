@@ -4,7 +4,6 @@ import functools
 import typing as t
 from dataclasses import dataclass
 from functools import cache
-import pydantic as p
 import pytest as pt
 import random
 
@@ -208,13 +207,13 @@ def dependency[Data](func: t.Callable[[], Data]) -> Injector[Data]:
 def test_token_injection():
 
     @dependency
-    def token() -> p.SecretStr:
-        return p.SecretStr("test_token")
+    def token() -> str:
+        return "test_token"
 
     @token.inject
-    def build_http_headers(token: p.SecretStr):
+    def build_http_headers(token: str):
         return {
-            "Authorization": f"Bearer {token.get_secret_value()}"
+            "Authorization": f"Bearer {token}"
         }
 
     for i in range(3):
@@ -334,15 +333,15 @@ def test_multiple_fake_contexts():
         return random.randint(_NormalRange.START, _NormalRange.END)
 
 
-    PROD_TOKEN = p.SecretStr("prod_token")
-    FAKE_TOKEN = p.SecretStr("fake_token")
+    PROD_TOKEN = "prod_token"
+    FAKE_TOKEN = "fake_token"
 
     @dependency
     def token():
         return PROD_TOKEN
 
-    PROD_URL = p.HttpUrl("http://prod-api.com")
-    FAKE_URL = p.HttpUrl("http://fake-api.com")
+    PROD_URL = "http://prod-api.com"
+    FAKE_URL = "http://fake-api.com"
 
 
     @dependency
@@ -353,8 +352,8 @@ def test_multiple_fake_contexts():
     @token.inject
     @api_base_url.inject
     def get_random_user(
-        base_url: p.HttpUrl,
-        token: p.SecretStr,
+        base_url: str,
+        token: str,
         random_int: int,
         name: str
     ):
@@ -384,14 +383,14 @@ def test_chained_dependencies():
 
     @dependency
     def token():
-        return p.SecretStr("test_token")
+        return "test_token"
 
     values: list[str] = []
 
     @dependency
     @token.inject
-    def client(token: p.SecretStr):
-        values.append(token.get_secret_value())
+    def client(token: str):
+        values.append(token)
         return "test_client"
 
     @client.inject
