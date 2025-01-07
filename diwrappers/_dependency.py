@@ -1,21 +1,71 @@
 import contextlib
+import enum
 import functools
 import typing as t
 from dataclasses import dataclass
 from functools import cache
 import pydantic as p
-
+import pytest as pt
+import random
 
 @dataclass
 class Injector[Data]:
-    """Simple dependency injection container."""
+    """
+    A dependency injection container that manages the creation and injection of dependencies.
+    
+    This class provides a flexible way to manage dependencies in your application, supporting
+    both regular dependency injection and testing scenarios through context managers that
+    allow temporary dependency replacement.
+
+    Type Parameters:
+        Data: The type of the dependency being managed by this injector.
+
+    Attributes:
+        _constructor: A callable that creates new instances of the dependency.
+    
+    Example:
+        ```python
+        @dependency
+        def database_connection() -> Connection:
+            return create_db_connection()
+
+        @database_connection.inject
+        def get_user(db: Connection, user_id: int) -> User:
+            return db.query(User).filter_by(id=user_id).first()
+        ```
+    """
+
 
     _constructor: t.Callable[[], Data]
     """Function that creates new instances of the dependency."""
 
-    
+
     @contextlib.contextmanager
     def fake_value(self, val: Data):
+        """
+        Temporarily replace the dependency with a specific value.
+
+        This context manager allows you to substitute the normal dependency with a fixed value
+        for testing or debugging purposes. The original dependency is restored when exiting
+        the context.
+
+        Args:
+            val: The value to use instead of the normal dependency.
+
+        Yields:
+            The provided fake value.
+
+        Example:
+            ```python
+            @dependency
+            def get_api_key() -> str:
+                return "real_api_key"
+
+            with get_api_key.fake_value("test_key") as key:
+                # Code here will use "test_key" instead of "real_api_key"
+                assert key == "test_key"
+            ```
+        """
         tmp_constructor = self._constructor
         self._constructor = lambda: val
         try:
@@ -25,6 +75,34 @@ class Injector[Data]:
 
     
     def faker(self, fake_constructor: t.Callable[[], Data]):
+        """
+        Create a context manager that temporarily replaces the dependency constructor.
+
+        This decorator creates a context manager that allows you to substitute the normal
+        dependency constructor with a different one for testing or debugging purposes.
+        The original constructor is restored when exiting the context.
+
+        Args:
+            fake_constructor: A callable that will temporarily replace the normal dependency constructor.
+
+        Returns:
+            A context manager that can be used to temporarily replace the dependency constructor.
+
+        Example:
+            ```python
+            @dependency
+            def get_random_number() -> int:
+                return random.randint(1, 10)
+
+            @get_random_number.faker
+            def fake_random():
+                return 42
+
+            with fake_random():
+                # Code here will always get 42 instead of a random number
+                pass
+            ```
+        """
 
         @contextlib.contextmanager
         def wrapper():
@@ -38,7 +116,6 @@ class Injector[Data]:
         return wrapper
 
 
-
     def inject[**TaskParams, TaskReturn](
         self,
         task: t.Callable[
@@ -46,7 +123,35 @@ class Injector[Data]:
             TaskReturn
         ]
     ) -> t.Callable[TaskParams, TaskReturn]:
-        """Injects the dependency as the first argument of the decorated function."""
+        """
+        Decorates a function to inject the dependency as its first argument.
+
+        This decorator automatically provides the dependency to the decorated function
+        as its first argument. The dependency is created using the constructor function
+        every time the decorated function is called (unless the constructor is cached).
+
+        Type Parameters:
+            TaskParams: Type parameters for the decorated function's arguments
+            TaskReturn: Return type of the decorated function
+
+        Args:
+            task: The function to be decorated. Its first parameter must be of type Data.
+
+        Returns:
+            A wrapped function that will automatically receive the dependency as its first argument.
+
+        Example:
+            ```python
+            @dependency
+            def logger() -> Logger:
+                return Logger()
+
+            @logger.inject
+            def process_data(logger: Logger, data: dict) -> None:
+                logger.info(f"Processing {data}")
+                # ... process the data ...
+            ```
+        """
 
         @functools.wraps(task)
         def _wrapper(*args: TaskParams.args, **kwargs: TaskParams.kwargs):
@@ -58,39 +163,53 @@ class Injector[Data]:
         return _wrapper
 
 def dependency[Data](func: t.Callable[[], Data]) -> Injector[Data]:
-    """Creates a dependency injector from a constructor function."""
+    """
+    Creates a dependency injector from a constructor function.
+
+    This decorator creates an Injector instance that manages the creation and injection
+    of dependencies. It can be used to create both regular dependencies and singletons
+    (when combined with @cache).
+
+    Type Parameters:
+        Data: The type of the dependency being created
+
+    Args:
+        func: A constructor function that creates the dependency
+
+    Returns:
+        An Injector instance configured to manage the dependency
+
+    Example:
+        ```python
+        # Regular dependency
+        @dependency
+        def get_database() -> Database:
+            return Database(config.DB_URL)
+
+        # Singleton dependency
+        @dependency
+        @cache
+        def get_cache() -> Cache:
+            return Cache()
+        ```
+
+    Notes:
+        - The constructor function should have no parameters
+        - For singleton dependencies, apply @cache before @dependency
+        - The resulting injector provides .inject, .faker, and .fake_value methods
+        - Thread safety must be handled separately if needed
+    """
 
     return Injector(func)
 
 
+# SECTION: tests
 
-if __name__ == "__main__":
-    # NOTE: EXAMPLES 
-
-
-    # NOTE: non-contextual transient injection
-
-    import random
+def test_token_injection():
 
     @dependency
-    def random_int():
-        return random.randint(1, 10)
-
-
-    @random_int.inject
-    def throw_coin(random_int: int) -> t.Literal["heads", "tails"]:
-        if random_int <= 5:
-            return "heads"
-        else:
-            return "tails"
-
-
-    # NOTE: non-contextual singleton injection
-
-    @dependency
-    @cache
     def token() -> p.SecretStr:
-        return p.SecretStr("fake_api_token")
+        return p.SecretStr("test_token")
 
     @token.inject
     def build_http_headers(token: p.SecretStr):
@@ -98,86 +217,269 @@ if __name__ == "__main__":
             "Authorization": f"Bearer {token.get_secret_value()}"
         }
 
+    for i in range(3):
+        headers = build_http_headers()
+        assert headers["Authorization"] == "Bearer test_token", f"Attempt {i}"
 
-    # chaining injections
+def test_singleton_dependency():
 
-    import requests
-    class User(p.BaseModel):
-        user_id: int
-        name: str
+    counter = 0
 
     @dependency
     @cache
+    def get_counter():
+        nonlocal counter
+        counter += 1
+        return counter
+
+    @get_counter.inject
+    def read_counter(counter: int):
+        return counter
+
+    assert read_counter() == 1, "must always return the same value"
+    assert read_counter() == 1, "must always return the same value"
+    assert read_counter() == 1, "must always return the same value"
+    assert read_counter() == 1, "must always return the same value"
+
+    assert counter == 1, "constructor can only be called once"  # Constructor called only once
+
+
+# types and data for using random during tests
+
+class _NormalRange(enum.IntEnum):
+    """Ground truth range for random number generation"""
+    START = 1
+    END = 10
+
+class _TestRAnge(enum.IntEnum):
+    """Modified range for testing purposes"""
+    START = 11
+    END = 15
+
+N_TRIALS = 100
+""" Number of times the distribution will be sampled """
+
+SEED = 42
+""" Seed for the pRNG """
+
+@pt.fixture(autouse=True)
+def set_random_seed():
+    random.seed(SEED)
+    yield
+
+
+def test_faker_decorator():
+
+    @dependency
+    def random_int():
+        return random.randint(_NormalRange.START, _NormalRange.END)
+
+    @random_int.faker
+    def fake_random_int():
+        return random.randint(_TestRAnge.START, _TestRAnge.END)
+
+    @random_int.inject
+    def get_number(random_int: int):
+        return random_int
+
+
+    # Test normal behavior
+    assert all(
+        _NormalRange.START <= get_number() <= _NormalRange.END for _ in range(N_TRIALS)
+    )
+
+    # Test with faker
+    with fake_random_int():
+        assert all(
+            _TestRAnge.START <= get_number() <= _TestRAnge.END for _ in range(N_TRIALS)
+        )
+
+    # Test restoration after context
+    assert all(
+        _NormalRange.START <= get_number() <= _NormalRange.END for _ in range(N_TRIALS)
+    )
+
+def test_fake_value_context():
+
+    @dependency
+    def random_int():
+        return random.randint(_NormalRange.START, _NormalRange.END)
+
+    @random_int.inject
+    def get_number(random_int: int):
+        return random_int
+
+
+    # Test normal behavior
+    assert all(
+        _NormalRange.START <= get_number() <= _NormalRange.END for _ in range(N_TRIALS)
+    )
+
+    # Test with fake value
+    with random_int.fake_value(42) as fake_int:
+        assert get_number() == 42
+        assert fake_int == 42
+
+    # Test restoration after context
+    assert all(
+        _NormalRange.START <= get_number() <= _NormalRange.END for _ in range(N_TRIALS)
+    )
+
+def test_multiple_fake_contexts():
+
+    FAKE_INT = 1234
+
+    @dependency
+    def random_int():
+        return random.randint(_NormalRange.START, _NormalRange.END)
+
+
+    PROD_TOKEN = p.SecretStr("prod_token")
+    FAKE_TOKEN = p.SecretStr("fake_token")
+
+    @dependency
+    def token():
+        return PROD_TOKEN
+
+    PROD_URL = p.HttpUrl("http://prod-api.com")
+    FAKE_URL = p.HttpUrl("http://fake-api.com")
+
+
+    @dependency
     def api_base_url():
-        return p.HttpUrl("http://base-url-of-your-app")
+        return PROD_URL
 
     @random_int.inject
     @token.inject
     @api_base_url.inject
     def get_random_user(
-        # injections
         base_url: p.HttpUrl,
         token: p.SecretStr,
         random_int: int,
-
-        # call signature
         name: str
     ):
+        return base_url, token, random_int, name
 
-        response = requests.get(
-            url= base_url.unicode_string() + "/user",
-            json={
-                "user_id": random_int,
-                "name": name
-            },
-            headers={
-                "authorization": f"Bearer {token.get_secret_value()}"
-            }
-        )
-        response.raise_for_status()
-        return p.TypeAdapter(User).validate_json(response.text)
+    NAME = "user_name"
 
-
-    # NOTE: testing
-    
     with (
-        random_int.fake_value(1234) as fake_int,
-        token.fake_value("token_for_test_server"),
-        api_base_url.fake_value("http://localhost:8000"),
+        random_int.fake_value(FAKE_INT) as fake_int,
+        token.fake_value(FAKE_TOKEN) as fake_token,
+        api_base_url.fake_value(FAKE_URL) as fake_api_base_url
     ):
-        result = get_random_user(name="test_user")
-        assert result.user_id == fake_int
 
-    @random_int.faker
-    def fake_random():
-        return random.randint(0, 2)
+        assert FAKE_INT == fake_int
+        assert FAKE_TOKEN == fake_token
+        assert FAKE_URL == fake_api_base_url
 
-    with fake_random():
-        result = get_random_user(name="test_user")
-        assert result.user_id in (0, 1, 2)
+        _base_url, _token, _random_int, _name = get_random_user(name=NAME)
+        
+        assert _base_url == fake_api_base_url
+        assert _token == fake_token
+        assert _random_int == fake_int
+        assert _name == NAME
 
 
-    # chaining dependencies
+def test_chained_dependencies():
+
+    @dependency
+    def token():
+        return p.SecretStr("test_token")
+
+    values: list[str] = []
 
     @dependency
     @token.inject
     def client(token: p.SecretStr):
-        print(token)
-        return "client"
+        values.append(token.get_secret_value())
+        return "test_client"
 
     @client.inject
-    def task_using_client(client: str):
-        print(client)
+    def use_client(client: str):
+        values.append(client)
+        return client
+
+    result = use_client()
+    assert result == "test_client"
+    assert values == ["test_token", "test_client"]
 
 
-    # NOTE: framework integration (in this case, FastAPI)
+
+def test_multiple_dependencies():
 
     @dependency
-    def db_token():
-        return "fake_db_token"
+    def logger() -> str:
+        return "logger_instance"
 
-    @app.get("/items/")
-    @db_token.inject
-    def read_items(db_token: str):
-        return {"message": f"Will connect using to {db_token}"}
+    @dependency
+    def db_connection() -> str:
+        return "db_connection_instance"
+
+    @logger.inject
+    @db_connection.inject
+    def use_services(db_connection: str, logger: str):
+        return f"Using {db_connection} with {logger}"
+
+    assert use_services() == "Using db_connection_instance with logger_instance"
+
+def test_dependency_replacement():
+
+    @dependency
+    def config():
+        return {"env": "production"}
+
+    @config.inject
+    def get_env(config: dict[str, str]):
+        return config["env"]
+
+    assert get_env() == "production"
+
+    with config.fake_value({"env": "test"}):
+        assert get_env() == "test"
+
+    assert get_env() == "production"
+
+
+def test_injected_function_exception():
+
+    @dependency
+    def db_connection() -> str:
+        return "db"
+
+    @db_connection.inject
+    def failing_function(db_connection: str):
+        print(db_connection)
+        raise ValueError("Simulated error")
+
+    with pt.raises(ValueError, match="Simulated error"):
+        failing_function()
+
+
+def test_thread_safety():
+
+    import threading
+
+    @dependency
+    def random_number() -> int:
+        return random.randint(1, 100)
+
+    @random_number.inject
+    def get_number(random_number: int):
+        return random_number
+
+    results: list[int] = []
+
+    def worker():
+        results.append(get_number())
+
+    threads = [threading.Thread(target=worker) for _ in range(10)]
+
+    for thread in threads:
+        thread.start()
+
+    for thread in threads:
+        thread.join()
+
+    assert len(results) == 10
+    assert all(isinstance(num, int) and 1 <= num <= 100 for num in results)
 
