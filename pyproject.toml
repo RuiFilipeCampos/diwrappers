@@ -1,8 +1,8 @@
 
 [tool.poetry]
 name = "diwrappers"
-description = ""
-version = "0.2.3"
+description = "A lightweight, intuitive dependency injection library for Python that makes testing and dependency management a breeze."
+version = "0.2.4"
 authors = ["Rui Campos <mail@ruicampos.org>"]
 readme = "README.md"
 license = "MIT"
