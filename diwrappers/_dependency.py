@@ -2,10 +2,11 @@ import contextlib
 import enum
 import functools
 import typing as t
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from functools import cache
 import pytest as pt
 import random
+import uuid
 
 @dataclass
 class Injector[Data]:
@@ -38,6 +39,9 @@ class Injector[Data]:
     _constructor: t.Callable[[], Data]
     """Function that creates new instances of the dependency."""
 
+
+    _uuid: str = field(default_factory=lambda: uuid.uuid4().hex)
+    
 
     @contextlib.contextmanager
     def fake_value(self, val: Data):
@@ -200,7 +204,6 @@ def dependency[Data](func: t.Callable[[], Data]) -> Injector[Data]:
     """
 
     return Injector(func)
-
 
 # SECTION: tests
 
@@ -481,4 +484,57 @@ def test_thread_safety():
 
     assert len(results) == 10
     assert all(isinstance(num, int) and 1 <= num <= 100 for num in results)
+
+
+
+def test_nested_fakers():
+
+    GT_TOKEN = "real_token"
+    FAKE_1 = "fake_token_1"
+    FAKE_2 = "fake_token_2"
+
+    @dependency
+    def token() -> str:
+        return GT_TOKEN
+
+    @token.faker
+    def fake_token_1():
+        return FAKE_1
+
+    @token.faker
+    def fake_token_2():
+        return FAKE_2
+
+
+    @token.inject
+    def assert_gt(token: str):
+        assert GT_TOKEN == token
+
+
+    @token.inject
+    def assert_fake_1(token: str):
+        assert FAKE_1 == token
+
+    @token.inject
+    def assert_fake_2(token: str):
+        assert FAKE_2 == token
+
+    assert_gt()
+
+    with fake_token_1():
+        assert_fake_1()
+        with fake_token_2():  
+            assert_fake_2()
+            with fake_token_1():
+                assert_fake_1()
+            assert_fake_2()
+
+            assert_fake_2()
+            with fake_token_1():
+                assert_fake_1()
+            assert_fake_2()
+
+        assert_fake_1()
+
+    assert_gt()
 
