@@ -1,12 +1,15 @@
+
 [tool.poetry]
 name = "diwrappers"
-version = "0.2.2"
 description = ""
+version = "0.2.3"
 authors = ["Rui Campos <mail@ruicampos.org>"]
 readme = "README.md"
+license = "MIT"
 classifiers = [
     "Programming Language :: Python :: 3.12",
 ]
+repository = "https://github.com/ruifilipecampos/diwrappers"
 
 [tool.poetry.dependencies]
 python = "^3.12"
