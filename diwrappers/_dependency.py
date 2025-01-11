@@ -12,7 +12,7 @@ import uuid
 class Injector[Data]:
     """
     A dependency injection container that manages the creation and injection of dependencies.
-    
+
     This class provides a flexible way to manage dependencies in your application, supporting
     both regular dependency injection and testing scenarios through context managers that
     allow temporary dependency replacement.
@@ -25,13 +25,17 @@ class Injector[Data]:
     
     Example:
         ```python
-        @dependency
-        def database_connection() -> Connection:
-            return create_db_connection()
 
-        @database_connection.inject
-        def get_user(db: Connection, user_id: int) -> User:
-            return db.query(User).filter_by(id=user_id).first()
+        @dependency
+        def api_token() -> str:
+            return fetch_api_token()
+
+        @api_token.inject
+        def build_headers(api_token: str):
+            return {
+                'authorization': f'Bearer {api_token}'
+            }
+
         ```
     """
 
@@ -39,9 +43,6 @@ class Injector[Data]:
     _constructor: t.Callable[[], Data]
     """Function that creates new instances of the dependency."""
 
-
-    _uuid: str = field(default_factory=lambda: uuid.uuid4().hex)
-    
 
     @contextlib.contextmanager
     def fake_value(self, val: Data):
@@ -61,12 +62,12 @@ class Injector[Data]:
         Example:
             ```python
             @dependency
-            def get_api_key() -> str:
+            def api_key() -> str:
                 return "real_api_key"
 
-            with get_api_key.fake_value("test_key") as key:
+            with api_key.fake_value("test_key") as fake_key:
                 # Code here will use "test_key" instead of "real_api_key"
-                assert key == "test_key"
+                assert fake_key == "test_key"
             ```
         """
         tmp_constructor = self._constructor
@@ -94,14 +95,14 @@ class Injector[Data]:
         Example:
             ```python
             @dependency
-            def get_random_number() -> int:
+            def random_int() -> int:
                 return random.randint(1, 10)
 
-            @get_random_number.faker
-            def fake_random():
+            @random_int.faker
+            def fake_random_int():
                 return 42
 
-            with fake_random():
+            with fake_random_int():
                 # Code here will always get 42 instead of a random number
                 pass
             ```
@@ -150,7 +151,7 @@ class Injector[Data]:
                 return Logger()
 
             @logger.inject
-            def process_data(logger: Logger, data: dict) -> None:
+            def process_data(logger: Logger, data: dict[str, str]) -> None:
                 logger.info(f"Processing {data}")
                 # ... process the data ...
             ```
@@ -184,23 +185,22 @@ def dependency[Data](func: t.Callable[[], Data]) -> Injector[Data]:
 
     Example:
         ```python
-        # Regular dependency
+        # Regular dependency, will inject a different number each time
         @dependency
-        def get_database() -> Database:
-            return Database(config.DB_URL)
+        def random_int():
+            return random.random_int(1, 10)
 
-        # Singleton dependency
+        # Singleton dependency, will throw a random number and inject it until the end of the program
         @dependency
         @cache
-        def get_cache() -> Cache:
-            return Cache()
+        def random_int():
+            return random.random_int(1, 10)
         ```
 
     Notes:
         - The constructor function should have no parameters
         - For singleton dependencies, apply @cache before @dependency
         - The resulting injector provides .inject, .faker, and .fake_value methods
-        - Thread safety must be handled separately if needed
     """
 
     return Injector(func)
@@ -537,4 +537,7 @@ def test_nested_fakers():
         assert_fake_1()
 
     assert_gt()
+
+
+
 
