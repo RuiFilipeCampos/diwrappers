@@ -1,6 +1,6 @@
 [tool.poetry]
-name = "DIwrappers"
-version = "0.2.1"
+name = "diwrappers"
+version = "0.2.2"
 description = ""
 authors = ["Rui Campos <mail@ruicampos.org>"]
 readme = "README.md"
