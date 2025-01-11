@@ -2,11 +2,10 @@ import contextlib
 import enum
 import functools
 import typing as t
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from functools import cache
 import pytest as pt
 import random
-import uuid
 
 @dataclass
 class Injector[Data]:
