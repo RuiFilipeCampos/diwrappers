@@ -1,13 +1,15 @@
 [tool.poetry]
 name = "DIwrappers"
-version = "0.2.0"
+version = "0.2.1"
 description = ""
 authors = ["Rui Campos <mail@ruicampos.org>"]
 readme = "README.md"
+classifiers = [
+    "Programming Language :: Python :: 3.12",
+]
 
 [tool.poetry.dependencies]
 python = "^3.12"
-
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.3.4"
