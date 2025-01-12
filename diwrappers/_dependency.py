@@ -3,10 +3,12 @@ import enum
 import functools
 import random
 import typing as t
+import uuid
+from collections import abc
 from dataclasses import dataclass
 from functools import cache
 
-import pytest as pt
+import pytest
 
 
 @dataclass
@@ -44,7 +46,7 @@ class Injector[Data]:
     """Function that creates new instances of the dependency."""
 
     @contextlib.contextmanager
-    def fake_value(self, val: Data):
+    def fake_value(self, val: Data) -> abc.Generator[Data, t.Any, None]:
         """Temporarily replace the dependency with a specific value.
 
         This context manager allows you to substitute the normal dependency with a fixed value
@@ -84,7 +86,8 @@ class Injector[Data]:
         The original constructor is restored when exiting the context.
 
         Args:
-            fake_constructor: A callable that will temporarily replace the normal dependency constructor.
+            fake_constructor:
+                A callable that will temporarily replace the normal dependency constructor.
 
         Returns:
             A context manager that can be used to temporarily replace the dependency constructor.
@@ -118,7 +121,8 @@ class Injector[Data]:
         return wrapper
 
     def inject[**TaskParams, TaskReturn](
-        self, task: t.Callable[t.Concatenate[Data, TaskParams], TaskReturn],
+        self,
+        task: t.Callable[t.Concatenate[Data, TaskParams], TaskReturn],
     ) -> t.Callable[TaskParams, TaskReturn]:
         """Decorates a function to inject the dependency as its first argument.
 
@@ -198,10 +202,15 @@ def dependency[Data](func: t.Callable[[], Data]) -> Injector[Data]:
     return Injector(func)
 
 
-# SECTION: tests
+# SECTION tests
 
-
-# bandit: skip-file
+# fake data
+NAME = "user_name"
+PROD_TOKEN = uuid.uuid4().hex
+FAKE_TOKEN = uuid.uuid4().hex
+PROD_URL = "http://prod-api.com"
+FAKE_URL = "http://fake-api.com"
+FAKE_INT = 1234
 
 
 def test_token_injection() -> None:
@@ -237,9 +246,7 @@ def test_singleton_dependency() -> None:
     assert read_counter() == 1, "must always return the same value"
     assert read_counter() == 1, "must always return the same value"
 
-    assert counter == 1, (
-        "constructor can only be called once"
-    )  # Constructor called only once
+    assert counter == 1, "constructor can only be called once"  # Constructor called only once
 
 
 # types and data for using random during tests
@@ -266,39 +273,33 @@ SEED = 42
 """ Seed for the pRNG """
 
 
-@pt.fixture(autouse=True)
+@pytest.fixture(autouse=True)
 def set_random_seed() -> None:
     random.seed(SEED)
 
 
 def test_faker_decorator() -> None:
     @dependency
-    def random_int():
+    def random_int() -> int:
         return random.randint(_NormalRange.START, _NormalRange.END)  # nosec - for testing purposes, not used in package
 
     @random_int.faker
-    def fake_random_int():
+    def fake_random_int() -> int:
         return random.randint(_TestRAnge.START, _TestRAnge.END)  # nosec - for testing purposes, not used in package
 
     @random_int.inject
-    def get_number(random_int: int):
+    def get_number(random_int: int) -> int:
         return random_int
 
     # Test normal behavior
-    assert all(
-        _NormalRange.START <= get_number() <= _NormalRange.END for _ in range(N_TRIALS)
-    )
+    assert all(_NormalRange.START <= get_number() <= _NormalRange.END for _ in range(N_TRIALS))
 
     # Test with faker
     with fake_random_int():
-        assert all(
-            _TestRAnge.START <= get_number() <= _TestRAnge.END for _ in range(N_TRIALS)
-        )
+        assert all(_TestRAnge.START <= get_number() <= _TestRAnge.END for _ in range(N_TRIALS))
 
     # Test restoration after context
-    assert all(
-        _NormalRange.START <= get_number() <= _NormalRange.END for _ in range(N_TRIALS)
-    )
+    assert all(_NormalRange.START <= get_number() <= _NormalRange.END for _ in range(N_TRIALS))
 
 
 def test_fake_value_context() -> None:
@@ -311,37 +312,25 @@ def test_fake_value_context() -> None:
         return random_int
 
     # Test normal behavior
-    assert all(
-        _NormalRange.START <= get_number() <= _NormalRange.END for _ in range(N_TRIALS)
-    )
+    assert all(_NormalRange.START <= get_number() <= _NormalRange.END for _ in range(N_TRIALS))
 
     # Test with fake value
-    with random_int.fake_value(42) as fake_int:
-        assert get_number() == 42
-        assert fake_int == 42
+    with random_int.fake_value(FAKE_INT) as fake_int:
+        assert get_number() == FAKE_INT
+        assert fake_int == FAKE_INT
 
     # Test restoration after context
-    assert all(
-        _NormalRange.START <= get_number() <= _NormalRange.END for _ in range(N_TRIALS)
-    )
+    assert all(_NormalRange.START <= get_number() <= _NormalRange.END for _ in range(N_TRIALS))
 
 
 def test_multiple_fake_contexts() -> None:
-    FAKE_INT = 1234
-
     @dependency
     def random_int():
-        return random.randint(_NormalRange.START, _NormalRange.END)  # nosec - for testing purposes, not used in package
-
-    PROD_TOKEN = "prod_token"  # nosec - not a real token
-    FAKE_TOKEN = "fake_token"  # nosec - not a real token
+        return random.randint(_NormalRange.START, _NormalRange.END)
 
     @dependency
     def token():
         return PROD_TOKEN
-
-    PROD_URL = "http://prod-api.com"
-    FAKE_URL = "http://fake-api.com"
 
     @dependency
     def api_base_url():
@@ -352,8 +341,6 @@ def test_multiple_fake_contexts() -> None:
     @api_base_url.inject
     def get_random_user(base_url: str, token: str, random_int: int, name: str):
         return base_url, token, random_int, name
-
-    NAME = "user_name"
 
     with (
         random_int.fake_value(FAKE_INT) as fake_int,
@@ -414,11 +401,11 @@ def test_multiple_dependencies() -> None:
 
 def test_dependency_replacement() -> None:
     @dependency
-    def config():
+    def config() -> dict[str, str]:
         return {"env": "production"}
 
     @config.inject
-    def get_env(config: dict[str, str]):
+    def get_env(config: dict[str, str]) -> str:
         return config["env"]
 
     assert get_env() == "production"
@@ -435,23 +422,26 @@ def test_injected_function_exception() -> None:
         return "db"
 
     @db_connection.inject
-    def failing_function(db_connection: str) -> t.NoReturn:
+    def failing_function(_db_connection: str) -> t.NoReturn:
         msg = "Simulated error"
         raise ValueError(msg)
 
-    with pt.raises(ValueError, match="Simulated error"):
+    with pytest.raises(ValueError, match="Simulated error"):
         failing_function()
 
 
 def test_thread_safety() -> None:
     import threading
 
+    range_start = 1
+    range_end = 100
+
     @dependency
     def random_number() -> int:
-        return random.randint(1, 100)  # nosec - for testing purposes, not used in package
+        return random.randint(range_start, range_end)  # nosec - for testing purposes, not used in package
 
     @random_number.inject
-    def get_number(random_number: int):
+    def get_number(random_number: int) -> int:
         return random_number
 
     results: list[int] = []
@@ -459,7 +449,8 @@ def test_thread_safety() -> None:
     def worker() -> None:
         results.append(get_number())
 
-    threads = [threading.Thread(target=worker) for _ in range(10)]
+    number_of_threads = 10
+    threads = [threading.Thread(target=worker) for _ in range(number_of_threads)]
 
     for thread in threads:
         thread.start()
@@ -467,15 +458,16 @@ def test_thread_safety() -> None:
     for thread in threads:
         thread.join()
 
-    assert len(results) == 10
-    assert all(isinstance(num, int) and 1 <= num <= 100 for num in results)
+    assert len(results) == number_of_threads
+    assert all(isinstance(num, int) and range_start <= num <= range_end for num in results)
+
+
+GT_TOKEN = uuid.uuid4().hex
+FAKE_1 = uuid.uuid4().hex
+FAKE_2 = uuid.uuid4().hex
 
 
 def test_nested_fakers() -> None:
-    GT_TOKEN = "real_token"  # nosec - not a real token
-    FAKE_1 = "fake_token_1"  # nosec - not a real token
-    FAKE_2 = "fake_token_2"  # nosec - not a real token
-
     @dependency
     def token() -> str:
         return GT_TOKEN

@@ -4,7 +4,7 @@ import typing as t
 from collections import abc
 from dataclasses import dataclass
 
-import pytest as pt
+import pytest
 
 
 @dataclass
@@ -43,7 +43,7 @@ class AsyncInjector[Data]:
     ) -> t.Callable[TaskParams, abc.Awaitable[TaskReturn]]:
         @functools.wraps(task)
         async def _wrapper(*args: TaskParams.args, **kwargs: TaskParams.kwargs):
-            """Creates and injects the dependency."""
+            """Create and inject the dependency."""
             data = await self._constructor()
             return await task(data, *args, **kwargs)
 
@@ -56,10 +56,11 @@ def async_dependency[Data](
     return AsyncInjector(func)
 
 
-@pt.mark.asyncio
-async def test_simple_usage() -> None:
-    GT_USER_ID = 1234
+GT_USER_ID = 1234
 
+
+@pytest.mark.asyncio
+async def test_simple_usage() -> None:
     @async_dependency
     async def user_id():
         # perform an http request
