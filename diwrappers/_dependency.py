@@ -206,6 +206,9 @@ def dependency[Data](func: t.Callable[[], Data]) -> Injector[Data]:
 
 # SECTION: tests
 
+
+# bandit: skip-file 
+
 def test_token_injection():
 
     @dependency
@@ -273,11 +276,11 @@ def test_faker_decorator():
 
     @dependency
     def random_int():
-        return random.randint(_NormalRange.START, _NormalRange.END)
+        return random.randint(_NormalRange.START, _NormalRange.END) # nosec - for testing purposes, not used in package
 
     @random_int.faker
     def fake_random_int():
-        return random.randint(_TestRAnge.START, _TestRAnge.END)
+        return random.randint(_TestRAnge.START, _TestRAnge.END) # nosec - for testing purposes, not used in package
 
     @random_int.inject
     def get_number(random_int: int):
@@ -304,7 +307,7 @@ def test_fake_value_context():
 
     @dependency
     def random_int():
-        return random.randint(_NormalRange.START, _NormalRange.END)
+        return random.randint(_NormalRange.START, _NormalRange.END) # nosec - for testing purposes, not used in package
 
     @random_int.inject
     def get_number(random_int: int):
@@ -332,11 +335,11 @@ def test_multiple_fake_contexts():
 
     @dependency
     def random_int():
-        return random.randint(_NormalRange.START, _NormalRange.END)
+        return random.randint(_NormalRange.START, _NormalRange.END) # nosec - for testing purposes, not used in package
 
 
-    PROD_TOKEN = "prod_token"
-    FAKE_TOKEN = "fake_token"
+    PROD_TOKEN = "prod_token" # nosec - not a real token 
+    FAKE_TOKEN = "fake_token" # nosec - not a real token 
 
     @dependency
     def token():
@@ -462,7 +465,7 @@ def test_thread_safety():
 
     @dependency
     def random_number() -> int:
-        return random.randint(1, 100)
+        return random.randint(1, 100) # nosec - for testing purposes, not used in package
 
     @random_number.inject
     def get_number(random_number: int):
@@ -486,11 +489,11 @@ def test_thread_safety():
 
 
 
-def test_nested_fakers():
+def test_nested_fakers(): 
 
-    GT_TOKEN = "real_token"
-    FAKE_1 = "fake_token_1"
-    FAKE_2 = "fake_token_2"
+    GT_TOKEN = "real_token" # nosec - not a real token 
+    FAKE_1 = "fake_token_1" # nosec - not a real token 
+    FAKE_2 = "fake_token_2" # nosec - not a real token 
 
     @dependency
     def token() -> str:
