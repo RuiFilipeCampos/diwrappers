@@ -124,7 +124,7 @@ class Injector[Data]:
         self,
         task: t.Callable[t.Concatenate[Data, TaskParams], TaskReturn],
     ) -> t.Callable[TaskParams, TaskReturn]:
-        """Decorates a function to inject the dependency as its first argument.
+        """Decorate a function to inject the dependency as its first argument.
 
         This decorator automatically provides the dependency to the decorated function
         as its first argument. The dependency is created using the constructor function
@@ -156,7 +156,7 @@ class Injector[Data]:
 
         @functools.wraps(task)
         def _wrapper(*args: TaskParams.args, **kwargs: TaskParams.kwargs):
-            """Creates and injects the dependency."""
+            """Create and inject the dependency."""
             data = self._constructor()
             return task(data, *args, **kwargs)
 
@@ -164,7 +164,7 @@ class Injector[Data]:
 
 
 def dependency[Data](func: t.Callable[[], Data]) -> Injector[Data]:
-    """Creates a dependency injector from a constructor function.
+    """Create a dependency injector from a constructor function.
 
     This decorator creates an Injector instance that manages the creation and injection
     of dependencies. It can be used to create both regular dependencies and singletons
@@ -186,7 +186,8 @@ def dependency[Data](func: t.Callable[[], Data]) -> Injector[Data]:
         def random_int():
             return random.random_int(1, 10)
 
-        # Singleton dependency, will throw a random number and inject it until the end of the program
+        # Singleton dependency, will throw a random number and
+        # inject it until the end of the program
         @dependency
         @cache
         def random_int():
@@ -438,7 +439,7 @@ def test_thread_safety() -> None:
 
     @dependency
     def random_number() -> int:
-        return random.randint(range_start, range_end)  # nosec - for testing purposes, not used in package
+        return random.randint(range_start, range_end)
 
     @random_number.inject
     def get_number(random_number: int) -> int:

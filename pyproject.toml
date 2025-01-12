@@ -41,5 +41,9 @@ line-length = 100
 
 [tool.ruff.lint]
 select = ['ALL']
-ignore = ['S101', 'ANN202']
+ignore = [
+    'S311', # pRNG is only used for testing purposes
+    'S101',
+    'ANN202'
+]
 

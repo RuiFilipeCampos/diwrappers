@@ -1,3 +1,5 @@
+"""Entrypoint of diwrappers."""
+
 from ._async_dependency import async_dependency
 from ._dependency import dependency
 
