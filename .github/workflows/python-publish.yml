@@ -23,10 +23,11 @@ jobs:
       - run: |
 
           VERSION=${{ github.ref }}
+          VERSION=$(echo $VERSION | sed 's/refs\/tags\/v//')
 
           poetry --version
           poetry config pypi-token.pypi ${{ secrets.PYPI_TOKEN }}
-          poetry version ${VERSION:11}
+          poetry version $VERSION
           poetry publish --build
 
       - name: Upload distributions
