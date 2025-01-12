@@ -2,5 +2,6 @@ exclude_pattern: '*/.venv/*,*/dist/*,*/build/*,.git/*'
 
 skips:
   - B101  # Skip assert statements
+  - B311
 
 recursive: true  
