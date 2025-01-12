@@ -45,7 +45,8 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - uses: Gr1N/setup-poetry@v8
+      - run: rm -rf diwrappers
+      - run: ls
       - run: pip install diwrappers
       - run: |
           VERSION=${{ github.ref }}
