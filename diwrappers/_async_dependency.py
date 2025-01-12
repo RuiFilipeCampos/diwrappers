@@ -1,8 +1,9 @@
 import contextlib
-import collections.abc as abc
 import functools
 import typing as t
+from collections import abc
 from dataclasses import dataclass
+
 import pytest as pt
 
 
@@ -43,7 +44,6 @@ class AsyncInjector[Data]:
         @functools.wraps(task)
         async def _wrapper(*args: TaskParams.args, **kwargs: TaskParams.kwargs):
             """Creates and injects the dependency."""
-
             data = await self._constructor()
             return await task(data, *args, **kwargs)
 
@@ -69,4 +69,4 @@ async def test_simple_usage():
     async def return_injected_value(user_id: int):
         return user_id
 
-    assert GT_USER_ID == await return_injected_value()
+    assert await return_injected_value() == GT_USER_ID

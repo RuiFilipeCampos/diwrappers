@@ -1,17 +1,17 @@
 import contextlib
 import enum
 import functools
+import random
 import typing as t
 from dataclasses import dataclass
 from functools import cache
+
 import pytest as pt
-import random
 
 
 @dataclass
 class Injector[Data]:
-    """
-    A dependency injection container that manages the creation and injection of dependencies.
+    """A dependency injection container that manages the creation and injection of dependencies.
 
     This class provides a flexible way to manage dependencies in your application, supporting
     both regular dependency injection and testing scenarios through context managers that
@@ -37,6 +37,7 @@ class Injector[Data]:
             }
 
         ```
+
     """
 
     _constructor: t.Callable[[], Data]
@@ -44,8 +45,7 @@ class Injector[Data]:
 
     @contextlib.contextmanager
     def fake_value(self, val: Data):
-        """
-        Temporarily replace the dependency with a specific value.
+        """Temporarily replace the dependency with a specific value.
 
         This context manager allows you to substitute the normal dependency with a fixed value
         for testing or debugging purposes. The original dependency is restored when exiting
@@ -67,6 +67,7 @@ class Injector[Data]:
                 # Code here will use "test_key" instead of "real_api_key"
                 assert fake_key == "test_key"
             ```
+
         """
         tmp_constructor = self._constructor
         self._constructor = lambda: val
@@ -76,8 +77,7 @@ class Injector[Data]:
             self._constructor = tmp_constructor
 
     def faker(self, fake_constructor: t.Callable[[], Data]):
-        """
-        Create a context manager that temporarily replaces the dependency constructor.
+        """Create a context manager that temporarily replaces the dependency constructor.
 
         This decorator creates a context manager that allows you to substitute the normal
         dependency constructor with a different one for testing or debugging purposes.
@@ -103,6 +103,7 @@ class Injector[Data]:
                 # Code here will always get 42 instead of a random number
                 pass
             ```
+
         """
 
         @contextlib.contextmanager
@@ -117,10 +118,9 @@ class Injector[Data]:
         return wrapper
 
     def inject[**TaskParams, TaskReturn](
-        self, task: t.Callable[t.Concatenate[Data, TaskParams], TaskReturn]
+        self, task: t.Callable[t.Concatenate[Data, TaskParams], TaskReturn],
     ) -> t.Callable[TaskParams, TaskReturn]:
-        """
-        Decorates a function to inject the dependency as its first argument.
+        """Decorates a function to inject the dependency as its first argument.
 
         This decorator automatically provides the dependency to the decorated function
         as its first argument. The dependency is created using the constructor function
@@ -147,12 +147,12 @@ class Injector[Data]:
                 logger.info(f"Processing {data}")
                 # ... process the data ...
             ```
+
         """
 
         @functools.wraps(task)
         def _wrapper(*args: TaskParams.args, **kwargs: TaskParams.kwargs):
             """Creates and injects the dependency."""
-
             data = self._constructor()
             return task(data, *args, **kwargs)
 
@@ -160,8 +160,7 @@ class Injector[Data]:
 
 
 def dependency[Data](func: t.Callable[[], Data]) -> Injector[Data]:
-    """
-    Creates a dependency injector from a constructor function.
+    """Creates a dependency injector from a constructor function.
 
     This decorator creates an Injector instance that manages the creation and injection
     of dependencies. It can be used to create both regular dependencies and singletons
@@ -194,8 +193,8 @@ def dependency[Data](func: t.Callable[[], Data]) -> Injector[Data]:
         - The constructor function should have no parameters
         - For singleton dependencies, apply @cache before @dependency
         - The resulting injector provides .inject, .faker, and .fake_value methods
-    """
 
+    """
     return Injector(func)
 
 
@@ -270,7 +269,6 @@ SEED = 42
 @pt.fixture(autouse=True)
 def set_random_seed():
     random.seed(SEED)
-    yield
 
 
 def test_faker_decorator():
@@ -362,9 +360,9 @@ def test_multiple_fake_contexts():
         token.fake_value(FAKE_TOKEN) as fake_token,
         api_base_url.fake_value(FAKE_URL) as fake_api_base_url,
     ):
-        assert FAKE_INT == fake_int
-        assert FAKE_TOKEN == fake_token
-        assert FAKE_URL == fake_api_base_url
+        assert fake_int == FAKE_INT
+        assert fake_token == FAKE_TOKEN
+        assert fake_api_base_url == FAKE_URL
 
         _base_url, _token, _random_int, _name = get_random_user(name=NAME)
 
@@ -492,15 +490,15 @@ def test_nested_fakers():
 
     @token.inject
     def assert_gt(token: str):
-        assert GT_TOKEN == token
+        assert token == GT_TOKEN
 
     @token.inject
     def assert_fake_1(token: str):
-        assert FAKE_1 == token
+        assert token == FAKE_1
 
     @token.inject
     def assert_fake_2(token: str):
-        assert FAKE_2 == token
+        assert token == FAKE_2
 
     assert_gt()
 

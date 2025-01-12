@@ -29,7 +29,7 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poe.tasks]
 test = "pytest diwrappers/*.py -vvvvv"
-lint = "ruff check diwrappers/*.py"
+lint = "ruff check diwrappers/*.py --select ALL --ignore S101"
 format = "ruff format diwrappers/*.py"
 type = "basedpyright diwrappers/*.py --level warning"
 sec = "bandit -r ./diwrappers --configfile ./bandit.yml"
