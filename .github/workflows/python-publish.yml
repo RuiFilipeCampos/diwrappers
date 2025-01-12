@@ -22,7 +22,10 @@ jobs:
           
       - uses: Gr1N/setup-poetry@v8
       - run: poetry --version
-      - run: poetry publish --build
+      - run: |
+          poetry --version
+          poetry config pypi-token.pypi ${{ secrets.PYPI_TOKEN }}
+          poetry publish --build
 
       - name: Upload distributions
         uses: actions/upload-artifact@v4
