@@ -45,8 +45,12 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - run: rm -rf diwrappers
-      - run: ls
+      - # ensure it doesn't use the cloned source code
+        run: rm -rf diwrappers
+      - # confirm above step
+        run: ls
+      - # wait 30s to ensure package is available in pypi 
+        run: sleep 30
       - run: |
           VERSION=${{ github.ref }}
           VERSION=$(echo $VERSION | sed 's/refs\/tags\/v//')
