@@ -30,12 +30,15 @@ build-backend = "poetry.core.masonry.api"
 
 
 [tool.poe.tasks]
-test = "pytest diwrappers/*.py -vvvvv"
 lint = "ruff check diwrappers/*.py"
 format = "ruff format diwrappers/*.py"
 type = "basedpyright diwrappers/*.py --level warning"
 sec = "bandit -r ./diwrappers --configfile ./bandit.yml"
 gha = "actionlint"
+
+[tool.poe.tasks.test]
+cmd = "pytest diwrappers/*.py -vvvvv"
+env = { DIWRAPPERS_TEST="true" }
 
 
 [tool.ruff]

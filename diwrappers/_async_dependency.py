@@ -1,10 +1,9 @@
 import contextlib
 import functools
+import os
 import typing as t
 from collections import abc
 from dataclasses import dataclass
-
-import pytest
 
 
 @dataclass
@@ -56,18 +55,21 @@ def async_dependency[Data](
     return AsyncInjector(func)
 
 
-GT_USER_ID = 1234
+TEST_VAR_NAME = "DIWRAPPERS_TEST"
+if TEST_VAR_NAME in os.environ and os.environ[TEST_VAR_NAME] == "true":
+    import pytest
 
+    GT_USER_ID = 1234
 
-@pytest.mark.asyncio
-async def test_simple_usage() -> None:
-    @async_dependency
-    async def user_id():
-        # perform an http request
-        return GT_USER_ID
+    @pytest.mark.asyncio
+    async def test_simple_usage() -> None:
+        @async_dependency
+        async def user_id():
+            # perform an http request
+            return GT_USER_ID
 
-    @user_id.inject
-    async def return_injected_value(user_id: int):
-        return user_id
+        @user_id.inject
+        async def return_injected_value(user_id: int):
+            return user_id
 
-    assert await return_injected_value() == GT_USER_ID
+        assert await return_injected_value() == GT_USER_ID
