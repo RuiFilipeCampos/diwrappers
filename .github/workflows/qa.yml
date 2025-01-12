@@ -54,7 +54,7 @@ jobs:
 
       - uses: Gr1N/setup-poetry@v8
       - run: poetry install
-      - run: poetry run poe bandit
+      - run: poetry run poe sec
 
   dependency-review:
     runs-on: ubuntu-latest
