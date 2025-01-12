@@ -20,9 +20,7 @@ jobs:
         with:
           python-version: "3.12"
       - uses: Gr1N/setup-poetry@v8
-      - name: Run pytest
-        run: |
-          poetry install
-          poetry run pytest **/*.py -vvvvv
+      - run: poetry install
+      - run: poe test
 
 
