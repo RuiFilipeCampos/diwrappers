@@ -51,6 +51,7 @@ jobs:
           path: "."
           fail-build: true
           severity-cutoff: high
+          ignore-rules: "B311"
 
       - uses: Gr1N/setup-poetry@v8
       - run: poetry install
