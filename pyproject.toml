@@ -2,7 +2,7 @@
 [tool.poetry]
 name = "diwrappers"
 description = "A lightweight, intuitive dependency injection library for Python that makes testing and dependency management a breeze."
-version = "0.2.4"
+version = "0.2.5"
 authors = ["Rui Campos <mail@ruicampos.org>"]
 readme = "README.md"
 license = "MIT"
