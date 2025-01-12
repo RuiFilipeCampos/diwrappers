@@ -1,5 +1,5 @@
 
-name: Release
+name: Test
 
 on:
   workflow_dispatch:
@@ -9,9 +9,8 @@ permissions:
   contents: read
 
 jobs:
-  release-build:
+  test:
     runs-on: ubuntu-latest
-
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -20,6 +19,6 @@ jobs:
       - uses: Gr1N/setup-poetry@v8
       - run: |
           poetry install
-          poetry run pytest **/*.py
+          poetry run pytest **/*.py -vvvvv
 
 
