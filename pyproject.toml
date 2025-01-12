@@ -20,16 +20,16 @@ poethepoet = "^0.32.0"
 basedpyright = "^1.23.2"
 pytest-asyncio = "^0.25.2"
 bandit = "^1.8.0"
+ruff = "^0.9.1"
 
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
 
-[tool.poe.tasks.test]
-cmd = "pytest diwrappers/*.py -vvvvv"
 
-[tool.poe.tasks.lint]
-cmd = "basedpyright diwrappers/*.py --level warning"
-
-[tool.poe.tasks.bandit]
-cmd = "bandit -r ./diwrappers --configfile ./bandit.yml"
+[tool.poe.tasks]
+test = "pytest diwrappers/*.py -vvvvv"
+lint = "ruff check diwrappers/*.py"
+format = "ruff format diwrappers/*.py"
+type = "basedpyright diwrappers/*.py --level warning"
+sec = "bandit -r ./diwrappers --configfile ./bandit.yml"
