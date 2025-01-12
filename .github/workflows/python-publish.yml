@@ -2,7 +2,6 @@
 name: Release
 
 on:
-  workflow_dispatch:
   release:
     types: [published]
 
@@ -21,10 +20,13 @@ jobs:
           python-version: "3.12"
           
       - uses: Gr1N/setup-poetry@v8
-      - run: poetry --version
       - run: |
+
+          VERSION=${{ github.ref }}
+
           poetry --version
           poetry config pypi-token.pypi ${{ secrets.PYPI_TOKEN }}
+          poetry version ${VERSION:refs/tags/v}
           poetry publish --build
 
       - name: Upload distributions
