@@ -8,6 +8,9 @@ on:
 permissions:
   contents: read
 
+env:
+  FORCE_COLOR: "1" 
+
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -17,7 +20,8 @@ jobs:
         with:
           python-version: "3.12"
       - uses: Gr1N/setup-poetry@v8
-      - run: |
+      - name: Run pytest
+        run: |
           poetry install
           poetry run pytest **/*.py -vvvvv
 
