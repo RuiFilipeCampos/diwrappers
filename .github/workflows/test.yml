@@ -1,0 +1,25 @@
+
+name: Release
+
+on:
+  workflow_dispatch:
+  push:
+
+permissions:
+  contents: read
+
+jobs:
+  release-build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: Gr1N/setup-poetry@v8
+      - run: |
+          poetry install
+          poetry run pytest **/*.py
+
+
