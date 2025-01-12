@@ -204,7 +204,7 @@ def dependency[Data](func: t.Callable[[], Data]) -> Injector[Data]:
 # bandit: skip-file
 
 
-def test_token_injection():
+def test_token_injection() -> None:
     @dependency
     def token() -> str:
         return "test_token"
@@ -218,7 +218,7 @@ def test_token_injection():
         assert headers["Authorization"] == "Bearer test_token", f"Attempt {i}"
 
 
-def test_singleton_dependency():
+def test_singleton_dependency() -> None:
     counter = 0
 
     @dependency
@@ -246,14 +246,14 @@ def test_singleton_dependency():
 
 
 class _NormalRange(enum.IntEnum):
-    """Ground truth range for random number generation"""
+    """Ground truth range for random number generation."""
 
     START = 1
     END = 10
 
 
 class _TestRAnge(enum.IntEnum):
-    """Modified range for testing purposes"""
+    """Modified range for testing purposes."""
 
     START = 11
     END = 15
@@ -267,11 +267,11 @@ SEED = 42
 
 
 @pt.fixture(autouse=True)
-def set_random_seed():
+def set_random_seed() -> None:
     random.seed(SEED)
 
 
-def test_faker_decorator():
+def test_faker_decorator() -> None:
     @dependency
     def random_int():
         return random.randint(_NormalRange.START, _NormalRange.END)  # nosec - for testing purposes, not used in package
@@ -301,7 +301,7 @@ def test_faker_decorator():
     )
 
 
-def test_fake_value_context():
+def test_fake_value_context() -> None:
     @dependency
     def random_int():
         return random.randint(_NormalRange.START, _NormalRange.END)  # nosec - for testing purposes, not used in package
@@ -326,7 +326,7 @@ def test_fake_value_context():
     )
 
 
-def test_multiple_fake_contexts():
+def test_multiple_fake_contexts() -> None:
     FAKE_INT = 1234
 
     @dependency
@@ -372,16 +372,16 @@ def test_multiple_fake_contexts():
         assert _name == NAME
 
 
-def test_chained_dependencies():
+def test_chained_dependencies() -> None:
     @dependency
-    def token():
+    def token() -> str:
         return "test_token"
 
     values: list[str] = []
 
     @dependency
     @token.inject
-    def client(token: str):
+    def client(token: str) -> str:
         values.append(token)
         return "test_client"
 
@@ -395,7 +395,7 @@ def test_chained_dependencies():
     assert values == ["test_token", "test_client"]
 
 
-def test_multiple_dependencies():
+def test_multiple_dependencies() -> None:
     @dependency
     def logger() -> str:
         return "logger_instance"
@@ -406,13 +406,13 @@ def test_multiple_dependencies():
 
     @logger.inject
     @db_connection.inject
-    def use_services(db_connection: str, logger: str):
+    def use_services(db_connection: str, logger: str) -> str:
         return f"Using {db_connection} with {logger}"
 
     assert use_services() == "Using db_connection_instance with logger_instance"
 
 
-def test_dependency_replacement():
+def test_dependency_replacement() -> None:
     @dependency
     def config():
         return {"env": "production"}
@@ -429,21 +429,21 @@ def test_dependency_replacement():
     assert get_env() == "production"
 
 
-def test_injected_function_exception():
+def test_injected_function_exception() -> None:
     @dependency
     def db_connection() -> str:
         return "db"
 
     @db_connection.inject
-    def failing_function(db_connection: str):
-        print(db_connection)
-        raise ValueError("Simulated error")
+    def failing_function(db_connection: str) -> t.NoReturn:
+        msg = "Simulated error"
+        raise ValueError(msg)
 
     with pt.raises(ValueError, match="Simulated error"):
         failing_function()
 
 
-def test_thread_safety():
+def test_thread_safety() -> None:
     import threading
 
     @dependency
@@ -456,7 +456,7 @@ def test_thread_safety():
 
     results: list[int] = []
 
-    def worker():
+    def worker() -> None:
         results.append(get_number())
 
     threads = [threading.Thread(target=worker) for _ in range(10)]
@@ -471,7 +471,7 @@ def test_thread_safety():
     assert all(isinstance(num, int) and 1 <= num <= 100 for num in results)
 
 
-def test_nested_fakers():
+def test_nested_fakers() -> None:
     GT_TOKEN = "real_token"  # nosec - not a real token
     FAKE_1 = "fake_token_1"  # nosec - not a real token
     FAKE_2 = "fake_token_2"  # nosec - not a real token
@@ -489,15 +489,15 @@ def test_nested_fakers():
         return FAKE_2
 
     @token.inject
-    def assert_gt(token: str):
+    def assert_gt(token: str) -> None:
         assert token == GT_TOKEN
 
     @token.inject
-    def assert_fake_1(token: str):
+    def assert_fake_1(token: str) -> None:
         assert token == FAKE_1
 
     @token.inject
-    def assert_fake_2(token: str):
+    def assert_fake_2(token: str) -> None:
         assert token == FAKE_2
 
     assert_gt()

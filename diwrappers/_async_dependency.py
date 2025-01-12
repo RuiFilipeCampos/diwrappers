@@ -57,7 +57,7 @@ def async_dependency[Data](
 
 
 @pt.mark.asyncio
-async def test_simple_usage():
+async def test_simple_usage() -> None:
     GT_USER_ID = 1234
 
     @async_dependency
