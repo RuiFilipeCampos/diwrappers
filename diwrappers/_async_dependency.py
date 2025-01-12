@@ -1,12 +1,9 @@
 import contextlib
 import collections.abc as abc
-import enum
 import functools
 import typing as t
 from dataclasses import dataclass
-from functools import cache
 import pytest as pt
-import random
 
 @dataclass
 class AsyncInjector[Data]:
