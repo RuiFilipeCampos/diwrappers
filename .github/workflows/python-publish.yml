@@ -26,7 +26,7 @@ jobs:
 
           poetry --version
           poetry config pypi-token.pypi ${{ secrets.PYPI_TOKEN }}
-          poetry version ${VERSION:refs/tags/v}
+          poetry version ${VERSION:11}
           poetry publish --build
 
       - name: Upload distributions
