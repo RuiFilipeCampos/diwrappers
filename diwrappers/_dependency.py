@@ -7,6 +7,7 @@ from functools import cache
 import pytest as pt
 import random
 
+
 @dataclass
 class Injector[Data]:
     """
@@ -21,7 +22,7 @@ class Injector[Data]:
 
     Attributes:
         _constructor: A callable that creates new instances of the dependency.
-    
+
     Example:
         ```python
 
@@ -38,10 +39,8 @@ class Injector[Data]:
         ```
     """
 
-
     _constructor: t.Callable[[], Data]
     """Function that creates new instances of the dependency."""
-
 
     @contextlib.contextmanager
     def fake_value(self, val: Data):
@@ -76,7 +75,6 @@ class Injector[Data]:
         finally:
             self._constructor = tmp_constructor
 
-    
     def faker(self, fake_constructor: t.Callable[[], Data]):
         """
         Create a context manager that temporarily replaces the dependency constructor.
@@ -112,19 +110,14 @@ class Injector[Data]:
             tmp_constructor = self._constructor
             self._constructor = fake_constructor
             try:
-                yield 
+                yield
             finally:
                 self._constructor = tmp_constructor
 
         return wrapper
 
-
     def inject[**TaskParams, TaskReturn](
-        self,
-        task: t.Callable[
-            t.Concatenate[Data, TaskParams],
-            TaskReturn
-        ]
+        self, task: t.Callable[t.Concatenate[Data, TaskParams], TaskReturn]
     ) -> t.Callable[TaskParams, TaskReturn]:
         """
         Decorates a function to inject the dependency as its first argument.
@@ -165,6 +158,7 @@ class Injector[Data]:
 
         return _wrapper
 
+
 def dependency[Data](func: t.Callable[[], Data]) -> Injector[Data]:
     """
     Creates a dependency injector from a constructor function.
@@ -204,29 +198,28 @@ def dependency[Data](func: t.Callable[[], Data]) -> Injector[Data]:
 
     return Injector(func)
 
+
 # SECTION: tests
 
 
-# bandit: skip-file 
+# bandit: skip-file
+
 
 def test_token_injection():
-
     @dependency
     def token() -> str:
         return "test_token"
 
     @token.inject
     def build_http_headers(token: str):
-        return {
-            "Authorization": f"Bearer {token}"
-        }
+        return {"Authorization": f"Bearer {token}"}
 
     for i in range(3):
         headers = build_http_headers()
         assert headers["Authorization"] == "Bearer test_token", f"Attempt {i}"
 
-def test_singleton_dependency():
 
+def test_singleton_dependency():
     counter = 0
 
     @dependency
@@ -245,26 +238,34 @@ def test_singleton_dependency():
     assert read_counter() == 1, "must always return the same value"
     assert read_counter() == 1, "must always return the same value"
 
-    assert counter == 1, "constructor can only be called once"  # Constructor called only once
+    assert counter == 1, (
+        "constructor can only be called once"
+    )  # Constructor called only once
 
 
 # types and data for using random during tests
 
+
 class _NormalRange(enum.IntEnum):
     """Ground truth range for random number generation"""
+
     START = 1
     END = 10
 
+
 class _TestRAnge(enum.IntEnum):
     """Modified range for testing purposes"""
+
     START = 11
     END = 15
+
 
 N_TRIALS = 100
 """ Number of times the distribution will be sampled """
 
 SEED = 42
 """ Seed for the pRNG """
+
 
 @pt.fixture(autouse=True)
 def set_random_seed():
@@ -273,19 +274,17 @@ def set_random_seed():
 
 
 def test_faker_decorator():
-
     @dependency
     def random_int():
-        return random.randint(_NormalRange.START, _NormalRange.END) # nosec - for testing purposes, not used in package
+        return random.randint(_NormalRange.START, _NormalRange.END)  # nosec - for testing purposes, not used in package
 
     @random_int.faker
     def fake_random_int():
-        return random.randint(_TestRAnge.START, _TestRAnge.END) # nosec - for testing purposes, not used in package
+        return random.randint(_TestRAnge.START, _TestRAnge.END)  # nosec - for testing purposes, not used in package
 
     @random_int.inject
     def get_number(random_int: int):
         return random_int
-
 
     # Test normal behavior
     assert all(
@@ -303,16 +302,15 @@ def test_faker_decorator():
         _NormalRange.START <= get_number() <= _NormalRange.END for _ in range(N_TRIALS)
     )
 
-def test_fake_value_context():
 
+def test_fake_value_context():
     @dependency
     def random_int():
-        return random.randint(_NormalRange.START, _NormalRange.END) # nosec - for testing purposes, not used in package
+        return random.randint(_NormalRange.START, _NormalRange.END)  # nosec - for testing purposes, not used in package
 
     @random_int.inject
     def get_number(random_int: int):
         return random_int
-
 
     # Test normal behavior
     assert all(
@@ -329,17 +327,16 @@ def test_fake_value_context():
         _NormalRange.START <= get_number() <= _NormalRange.END for _ in range(N_TRIALS)
     )
 
-def test_multiple_fake_contexts():
 
+def test_multiple_fake_contexts():
     FAKE_INT = 1234
 
     @dependency
     def random_int():
-        return random.randint(_NormalRange.START, _NormalRange.END) # nosec - for testing purposes, not used in package
+        return random.randint(_NormalRange.START, _NormalRange.END)  # nosec - for testing purposes, not used in package
 
-
-    PROD_TOKEN = "prod_token" # nosec - not a real token 
-    FAKE_TOKEN = "fake_token" # nosec - not a real token 
+    PROD_TOKEN = "prod_token"  # nosec - not a real token
+    FAKE_TOKEN = "fake_token"  # nosec - not a real token
 
     @dependency
     def token():
@@ -348,7 +345,6 @@ def test_multiple_fake_contexts():
     PROD_URL = "http://prod-api.com"
     FAKE_URL = "http://fake-api.com"
 
-
     @dependency
     def api_base_url():
         return PROD_URL
@@ -356,12 +352,7 @@ def test_multiple_fake_contexts():
     @random_int.inject
     @token.inject
     @api_base_url.inject
-    def get_random_user(
-        base_url: str,
-        token: str,
-        random_int: int,
-        name: str
-    ):
+    def get_random_user(base_url: str, token: str, random_int: int, name: str):
         return base_url, token, random_int, name
 
     NAME = "user_name"
@@ -369,15 +360,14 @@ def test_multiple_fake_contexts():
     with (
         random_int.fake_value(FAKE_INT) as fake_int,
         token.fake_value(FAKE_TOKEN) as fake_token,
-        api_base_url.fake_value(FAKE_URL) as fake_api_base_url
+        api_base_url.fake_value(FAKE_URL) as fake_api_base_url,
     ):
-
         assert FAKE_INT == fake_int
         assert FAKE_TOKEN == fake_token
         assert FAKE_URL == fake_api_base_url
 
         _base_url, _token, _random_int, _name = get_random_user(name=NAME)
-        
+
         assert _base_url == fake_api_base_url
         assert _token == fake_token
         assert _random_int == fake_int
@@ -385,7 +375,6 @@ def test_multiple_fake_contexts():
 
 
 def test_chained_dependencies():
-
     @dependency
     def token():
         return "test_token"
@@ -408,9 +397,7 @@ def test_chained_dependencies():
     assert values == ["test_token", "test_client"]
 
 
-
 def test_multiple_dependencies():
-
     @dependency
     def logger() -> str:
         return "logger_instance"
@@ -426,8 +413,8 @@ def test_multiple_dependencies():
 
     assert use_services() == "Using db_connection_instance with logger_instance"
 
-def test_dependency_replacement():
 
+def test_dependency_replacement():
     @dependency
     def config():
         return {"env": "production"}
@@ -445,7 +432,6 @@ def test_dependency_replacement():
 
 
 def test_injected_function_exception():
-
     @dependency
     def db_connection() -> str:
         return "db"
@@ -460,12 +446,11 @@ def test_injected_function_exception():
 
 
 def test_thread_safety():
-
     import threading
 
     @dependency
     def random_number() -> int:
-        return random.randint(1, 100) # nosec - for testing purposes, not used in package
+        return random.randint(1, 100)  # nosec - for testing purposes, not used in package
 
     @random_number.inject
     def get_number(random_number: int):
@@ -488,12 +473,10 @@ def test_thread_safety():
     assert all(isinstance(num, int) and 1 <= num <= 100 for num in results)
 
 
-
-def test_nested_fakers(): 
-
-    GT_TOKEN = "real_token" # nosec - not a real token 
-    FAKE_1 = "fake_token_1" # nosec - not a real token 
-    FAKE_2 = "fake_token_2" # nosec - not a real token 
+def test_nested_fakers():
+    GT_TOKEN = "real_token"  # nosec - not a real token
+    FAKE_1 = "fake_token_1"  # nosec - not a real token
+    FAKE_2 = "fake_token_2"  # nosec - not a real token
 
     @dependency
     def token() -> str:
@@ -507,11 +490,9 @@ def test_nested_fakers():
     def fake_token_2():
         return FAKE_2
 
-
     @token.inject
     def assert_gt(token: str):
         assert GT_TOKEN == token
-
 
     @token.inject
     def assert_fake_1(token: str):
@@ -525,7 +506,7 @@ def test_nested_fakers():
 
     with fake_token_1():
         assert_fake_1()
-        with fake_token_2():  
+        with fake_token_2():
             assert_fake_2()
             with fake_token_1():
                 assert_fake_1()
@@ -539,7 +520,3 @@ def test_nested_fakers():
         assert_fake_1()
 
     assert_gt()
-
-
-
-
