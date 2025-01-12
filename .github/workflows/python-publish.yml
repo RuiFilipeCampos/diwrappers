@@ -47,7 +47,6 @@ jobs:
           python-version: "3.12"
       - run: rm -rf diwrappers
       - run: ls
-      - run: pip install diwrappers
       - run: |
           VERSION=${{ github.ref }}
           VERSION=$(echo $VERSION | sed 's/refs\/tags\/v//')
