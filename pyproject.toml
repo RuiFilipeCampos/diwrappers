@@ -31,5 +31,13 @@ cmd = "pytest diwrappers/*.py -vvvvv"
 [tool.poe.tasks.lint]
 cmd = "basedpyright diwrappers/*.py --level warning"
 
-[tool.poe.tasks.security]
-cmd = "bandit -r ./diwrappers --exclude '*/.venv/*,*/dist/*,*/build/*,.git/*' -ll -ii"
+[tool.poe.tasks.bandit]
+cmd = """
+bandit -r ./diwrappers \
+  --exclude '*/.venv/*,*/dist/*,*/build/*,.git/*' \
+  -f custom \
+  --msg-template '{test_id} {severity} SEVERITY
+{relpath}:{line}
+{msg}
+'
+"""
