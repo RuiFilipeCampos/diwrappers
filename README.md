@@ -1,14 +1,17 @@
-# diwrappers
+# DIWrappers
 
-A lightweight, intuitive dependency injection library for Python that makes testing and dependency management a breeze.
+A lightweight, type-safe dependency injection library for Python that supports synchronous, asynchronous, and contextual dependencies.
 
 ## Features
 
-- Simple decorator-based dependency injection
-- Built-in support for singleton and transient dependencies
-- Seamless integration with popular frameworks like FastAPI
-- Powerful testing utilities with context managers
-- Type hint friendly with full Pydantic support
+- Type-safe dependency injection with Python type hints
+- Three injection patterns:
+  - Regular dependencies (`@dependency`)
+  - Async dependencies (`@async_dependency`)
+  - Contextual dependencies (`@contextual_dependency`)
+- Testing utilities for mocking dependencies
+- Support for singleton dependencies via `@cache`
+- Minimal boilerplate and intuitive API
 
 ## Installation
 
@@ -16,158 +19,140 @@ A lightweight, intuitive dependency injection library for Python that makes test
 pip install diwrappers
 ```
 
-## Quick Start
+## Usage
 
-Here's a simple example showing how to inject a configuration dependency:
+### Basic Dependency Injection
 
 ```python
 from diwrappers import dependency
-from pydantic import SecretStr
-import os
 
 @dependency
-def api_token() -> SecretStr:
-    return SecretStr(os.environ["API_TOKEN"])
+def api_token() -> str:
+    return "your-api-token"
 
 @api_token.inject
-def send_request(api_token: SecretStr):
-    return f"Sending request with token: {api_token.get_secret_value()}"
+def make_request(api_token: str, endpoint: str):
+    return f"Calling {endpoint} with token {api_token}"
+
+# The api_token will be automatically injected
+result = make_request("/users")
 ```
 
-## Core Concepts
+### Async Dependencies
 
-### Dependency Types
-
-#### Transient Dependencies
-
-Transient dependencies are created each time they're requested. Perfect for generating random values or creating new instances:
+For dependencies that require asynchronous initialization:
 
 ```python
-from diwrappers import dependency
-import random
+from diwrappers import async_dependency
 
-@dependency
-def random_number():
-    return random.randint(1, 10)
+@async_dependency
+async def database():
+    connection = await establish_db_connection()
+    return connection
 
-@random_number.inject
-def play_game(random_number: int) -> str:
-    return "win" if random_number > 5 else "lose"
-```
-
-#### Singleton Dependencies
-
-Singleton dependencies are created once and reused. Ideal for database connections, configuration, or API clients:
-
-```python
-from functools import cache
-from pydantic import HttpUrl
-
-@dependency
-@cache  # Makes this a singleton
-def api_base_url():
-    return HttpUrl("https://api.example.com")
-```
-
-### Chaining Dependencies
-
-Dependencies can be chained together to build complex injection hierarchies:
-
-```python
-@dependency
-def database():
-    return Database("connection_string")
-
-@dependency
 @database.inject
-def user_repository(database: Database):
-    return UserRepository(database)
+async def get_user(db, user_id: int):
+    return await db.query(f"SELECT * FROM users WHERE id = {user_id}")
 
-@user_repository.inject
-def get_user(user_repository: UserRepository, user_id: int):
-    return user_repository.get_user(user_id)
+# Use with async/await
+user = await get_user(123)
 ```
 
-### Framework Integration
+### Contextual Dependencies
 
-DIWrappers works seamlessly with popular frameworks like FastAPI:
+For dependencies that need proper resource management:
 
 ```python
-from fastapi import FastAPI
-from diwrappers import dependency
+from diwrappers import contextual_dependency
+import contextlib
 
-app = FastAPI()
+@contextual_dependency
+@contextlib.contextmanager
+def db_transaction():
+    transaction = start_transaction()
+    try:
+        yield transaction
+        transaction.commit()
+    except:
+        transaction.rollback()
+        raise
 
-@dependency
-def db_connection():
-    return "database_connection"
+@db_transaction.inject
+def update_user(transaction, user_id: int, data: dict):
+    transaction.execute("UPDATE users SET ...", data)
 
-@app.get("/users/{user_id}")
-@db_connection.inject
-def get_user(user_id: int, db_connection: str):
-    return {"user_id": user_id, "connection": db_connection}
+# Must be wrapped in ensure() to properly manage the context
+@db_transaction.ensure
+def main():
+    update_user(123, {"name": "New Name"})
 ```
 
 ## Testing
 
-DIWrappers provides powerful utilities for testing injected dependencies:
+The library provides utilities for mocking dependencies in tests:
 
-### Using Context Managers
-
-```python
-@dependency
-def api_key():
-    return "production_key"
-
-@api_key.inject
-def make_request(api_key: str):
-    return f"Request with {api_key}"
-
-def test_make_request():
-    with api_key.fake_value("test_key"):
-        assert make_request() == "Request with test_key"
-```
-
-### Dynamic Fake Data
-
-Create dynamic fake data for more complex testing scenarios:
+### Using fake_value
 
 ```python
 @dependency
-def user_id():
-    return get_current_user_id()
+def current_time() -> float:
+    return time.time()
 
-@user_id.faker
-def fake_user_id():
-    return random.randint(1000, 9999)
-
-def test_with_random_users():
-    with fake_user_id():
-        result = get_user_data()
-        assert 1000 <= result.user_id <= 9999
+# In tests
+with current_time.fake_value(1234567890.0):
+    assert get_timestamp() == 1234567890.0
 ```
 
-### Multiple Fakes
-
-Chain multiple fake dependencies in a single test:
+### Using faker
 
 ```python
-def test_complex_scenario():
-    with (
-        api_key.fake_value("test_key"),
-        database.fake_value(MockDatabase()),
-        user_id.fake_value(12345)
-    ):
-        result = perform_operation()
-        assert result.success
+@dependency
+def random_id() -> str:
+    return str(uuid.uuid4())
+
+@random_id.faker
+def fixed_id():
+    return "test-id-123"
+
+# In tests
+with fixed_id():
+    assert create_resource().id == "test-id-123"
 ```
 
-## Coming Soon
+## Singleton Dependencies
 
-- Contextual dependency injection (request-scoped, session-scoped)
-- Async support
-- Container lifecycle management
-- Enhanced framework integrations
+To create singleton dependencies that are cached for the lifetime of the program:
+
+```python
+from functools import cache
+
+@dependency
+@cache
+def config():
+    return load_config_from_file()
+```
+
+## Type Safety
+
+The library leverages Python's type hints to ensure type safety:
+
+```python
+@dependency
+def logger() -> Logger:
+    return Logger()
+
+@logger.inject
+def process_data(logger: Logger, data: dict) -> None:
+    logger.info(f"Processing {data}")  # Type-checked by your IDE/mypy
+```
+
+## Best Practices
+
+1. Keep dependency constructors simple and focused
+2. Use `@cache` for expensive-to-create dependencies that can be reused
+3. Prefer contextual dependencies for resources that need cleanup
+4. Always wrap contextual dependency usage with `ensure()`
+5. Use async dependencies for I/O-bound operations
 
 ## Contributing
 
