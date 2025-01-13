@@ -1,4 +1,4 @@
-# DIWrappers
+# diwrappers
 
 A lightweight, intuitive dependency injection library for Python that makes testing and dependency management a breeze.
 
