@@ -7,8 +7,6 @@ from dataclasses import dataclass
 
 import diwrappers._data as d
 
-MAX_DEPTH = 5
-
 type ContextualConstructor[Data] = t.Callable[[], contextlib.AbstractContextManager[Data]]
 
 
@@ -32,65 +30,6 @@ class MissingContextError(DependencyInjectionError):
         )
 
 
-def contains_value(needle: object, haystack: object, depth: int = 1) -> bool:
-    """Check if needle exists within haystack, including in nested structures.
-
-    Examples:
-        >>> contains_value(5, 5)
-        True
-
-        >>> contains_value("test", "different")
-        False
-
-        >>> contains_value(42, [1, 2, [3, 4, [42]]])
-        True
-
-        >>> contains_value("x", {"a": 1, "b": {"c": "x"}})
-        True
-
-        >>> contains_value("missing", [1, 2, 3])
-        False
-
-        >>> contains_value(True, {"a": False, "b": [{"c": True}]})
-        True
-
-        >>> class TestClass:
-        ...     def __init__(self):
-        ...         self.value = ["hidden"]
-        >>> obj = TestClass()
-        >>> contains_value("hidden", obj)
-        True
-
-        >>> contains_value(None, [1, None, 3])
-        True
-
-        >>> contains_value("key", {"key": "value"})
-        True
-
-    """
-    if needle == haystack:
-        return True
-
-    if isinstance(haystack, (int, str, bool)) or depth == MAX_DEPTH:
-        return False
-
-    depth = depth + 1
-
-    if d.is_tuple(haystack) or d.is_list(haystack):
-        return any(contains_value(needle, item, depth=depth) for item in haystack)
-
-    if d.is_dict(haystack):
-        return any(
-            contains_value(needle, k, depth=depth) or contains_value(needle, v, depth=depth)
-            for k, v in haystack.items()
-        )
-
-    if hasattr(haystack, "__dict__"):
-        return contains_value(needle, vars(haystack), depth=depth)
-
-    return False
-
-
 @dataclass
 class ContextualInjector[Data]:
     """A dependency injector that manages contextual dependencies."""
@@ -107,7 +46,7 @@ class ContextualInjector[Data]:
             with self._constructor() as data:
                 self._data = data
                 res = fn(*args, **kwargs)
-                if contains_value(needle=data, haystack=res):
+                if d.contains_value(needle=data, haystack=res):
                     raise DependencyLeakError
                 self._data = None
             return res

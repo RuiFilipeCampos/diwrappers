@@ -92,6 +92,68 @@ def is_dict(val: object) -> t.TypeGuard[dict[object, object]]:
     return isinstance(val, dict)
 
 
+MAX_DEPTH = 5
+
+
+def contains_value(needle: object, haystack: object, depth: int = 1) -> bool:
+    """Check if needle exists within haystack, including in nested structures.
+
+    Examples:
+        >>> contains_value(5, 5)
+        True
+
+        >>> contains_value("test", "different")
+        False
+
+        >>> contains_value(42, [1, 2, [3, 4, [42]]])
+        True
+
+        >>> contains_value("x", {"a": 1, "b": {"c": "x"}})
+        True
+
+        >>> contains_value("missing", [1, 2, 3])
+        False
+
+        >>> contains_value(True, {"a": False, "b": [{"c": True}]})
+        True
+
+        >>> class TestClass:
+        ...     def __init__(self):
+        ...         self.value = ["hidden"]
+        >>> obj = TestClass()
+        >>> contains_value("hidden", obj)
+        True
+
+        >>> contains_value(None, [1, None, 3])
+        True
+
+        >>> contains_value("key", {"key": "value"})
+        True
+
+    """
+    if needle == haystack:
+        return True
+
+    if isinstance(haystack, (int, str, bool)) or depth == MAX_DEPTH:
+        return False
+
+    depth = depth + 1
+
+    if is_tuple(haystack) or is_list(haystack):
+        return any(contains_value(needle, item, depth=depth) for item in haystack)
+
+    if is_dict(haystack):
+        return any(
+            contains_value(needle, k, depth=depth) or contains_value(needle, v, depth=depth)
+            for k, v in haystack.items()
+        )
+
+    if hasattr(haystack, "__dict__"):
+        return contains_value(needle, vars(haystack), depth=depth)
+
+    return False
+
+
 TEST_VAR_NAME = "DIWRAPPERS_TEST"
 """ Env variable that indicates if this is a test run """
 
