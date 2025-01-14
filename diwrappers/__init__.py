@@ -1,6 +1,6 @@
 """Entrypoint of diwrappers."""
 
-from ._asybc_contextual_dependency import async_contextual_dependency
+from ._async_contextual_dependency import async_contextual_dependency
 from ._async_dependency import async_dependency
 from ._commons._exceptions import (
     DependencyInjectionError,
