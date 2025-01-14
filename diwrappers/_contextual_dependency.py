@@ -8,7 +8,10 @@ from dataclasses import dataclass
 import diwrappers._commons._data as d
 import diwrappers._commons._exceptions as e
 
-type ContextualConstructor[Data] = t.Callable[[], contextlib.AbstractContextManager[Data]]
+type ContextualConstructor[Data] = t.Callable[
+    [],
+    contextlib.AbstractContextManager[Data],
+]
 
 
 @dataclass
@@ -49,7 +52,9 @@ class ContextualInjector[Data]:
         return _wrapper
 
 
-def contextual_dependency[Data](func: ContextualConstructor[Data]) -> ContextualInjector[Data]:
+def contextual_dependency[Data](
+    func: ContextualConstructor[Data],
+) -> ContextualInjector[Data]:
     return ContextualInjector(func)
 
 

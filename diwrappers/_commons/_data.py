@@ -140,11 +140,14 @@ def contains_value(needle: object, haystack: object, depth: int = 1) -> bool:
     depth = depth + 1
 
     if is_tuple(haystack) or is_list(haystack):
-        return any(contains_value(needle, item, depth=depth) for item in haystack)
+        return any(
+            contains_value(needle, item, depth=depth) for item in haystack
+        )
 
     if is_dict(haystack):
         return any(
-            contains_value(needle, k, depth=depth) or contains_value(needle, v, depth=depth)
+            contains_value(needle, k, depth=depth)
+            or contains_value(needle, v, depth=depth)
             for k, v in haystack.items()
         )
 

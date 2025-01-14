@@ -13,32 +13,15 @@ import diwrappers._commons._data as d
 
 @dataclass
 class Injector[Data]:
-    """A dependency injection container that manages the creation and injection of dependencies.
+    """A dependency injection container.
 
-    This class provides a flexible way to manage dependencies in your application, supporting
-    both regular dependency injection and testing scenarios through context managers that
-    allow temporary dependency replacement.
+    This class provides a flexible way to manage dependencies in your
+    application, supporting both regular dependency injection and
+    testing scenarios through context managers that allow temporary
+    dependency replacement.
 
     Type Parameters:
         Data: The type of the dependency being managed by this injector.
-
-    Attributes:
-        _constructor: A callable that creates new instances of the dependency.
-
-    Example:
-        ```python
-
-        @dependency
-        def api_token() -> str:
-            return fetch_api_token()
-
-        @api_token.inject
-        def build_headers(api_token: str):
-            return {
-                'authorization': f'Bearer {api_token}'
-            }
-
-        ```
 
     """
 
@@ -46,29 +29,14 @@ class Injector[Data]:
     """Function that creates new instances of the dependency."""
 
     @contextlib.contextmanager
-    def fake_value(self, val: Data) -> abc.Generator[Data, t.Any, None]:
+    def fake_value(self, val: Data) -> abc.Generator[Data, None, None]:
         """Temporarily replace the dependency with a specific value.
-
-        This context manager allows you to substitute the normal dependency with a fixed value
-        for testing or debugging purposes. The original dependency is restored when exiting
-        the context.
 
         Args:
             val: The value to use instead of the normal dependency.
 
         Yields:
             The provided fake value.
-
-        Example:
-            ```python
-            @dependency
-            def api_key() -> str:
-                return "real_api_key"
-
-            with api_key.fake_value("test_key") as fake_key:
-                # Code here will use "test_key" instead of "real_api_key"
-                assert fake_key == "test_key"
-            ```
 
         """
         tmp_constructor = self._constructor
@@ -79,33 +47,16 @@ class Injector[Data]:
             self._constructor = tmp_constructor
 
     def faker(self, fake_constructor: t.Callable[[], Data]):
-        """Create a context manager that temporarily replaces the dependency constructor.
-
-        This decorator creates a context manager that allows you to substitute the normal
-        dependency constructor with a different one for testing or debugging purposes.
-        The original constructor is restored when exiting the context.
+        """Create a context manager to replace the dependency constructor.
 
         Args:
             fake_constructor:
-                A callable that will temporarily replace the normal dependency constructor.
+                A callable that will temporarily replace the normal
+                dependency constructor.
 
         Returns:
-            A context manager that can be used to temporarily replace the dependency constructor.
-
-        Example:
-            ```python
-            @dependency
-            def random_int() -> int:
-                return random.randint(1, 10)
-
-            @random_int.faker
-            def fake_random_int():
-                return 42
-
-            with fake_random_int():
-                # Code here will always get 42 instead of a random number
-                pass
-            ```
+            A context manager that can be used to temporarily
+            replace the dependency constructor.
 
         """
 
@@ -126,31 +77,18 @@ class Injector[Data]:
     ) -> t.Callable[TaskParams, TaskReturn]:
         """Decorate a function to inject the dependency as its first argument.
 
-        This decorator automatically provides the dependency to the decorated function
-        as its first argument. The dependency is created using the constructor function
-        every time the decorated function is called (unless the constructor is cached).
-
         Type Parameters:
             TaskParams: Type parameters for the decorated function's arguments
             TaskReturn: Return type of the decorated function
 
         Args:
-            task: The function to be decorated. Its first parameter must be of type Data.
+            task:
+                The function to be decorated.
+                Its first parameter must be of type Data.
 
         Returns:
-            A wrapped function that will automatically receive the dependency as its first argument.
-
-        Example:
-            ```python
-            @dependency
-            def logger() -> Logger:
-                return Logger()
-
-            @logger.inject
-            def process_data(logger: Logger, data: dict[str, str]) -> None:
-                logger.info(f"Processing {data}")
-                # ... process the data ...
-            ```
+            A wrapped function that will automatically
+            receive the dependency as its first argument.
 
         """
 
@@ -166,38 +104,11 @@ class Injector[Data]:
 def dependency[Data](func: t.Callable[[], Data]) -> Injector[Data]:
     """Create a dependency injector from a constructor function.
 
-    This decorator creates an Injector instance that manages the creation and injection
-    of dependencies. It can be used to create both regular dependencies and singletons
-    (when combined with @cache).
-
     Type Parameters:
         Data: The type of the dependency being created
 
     Args:
         func: A constructor function that creates the dependency
-
-    Returns:
-        An Injector instance configured to manage the dependency
-
-    Example:
-        ```python
-        # Regular dependency, will inject a different number each time
-        @dependency
-        def random_int():
-            return random.random_int(1, 10)
-
-        # Singleton dependency, will throw a random number and
-        # inject it until the end of the program
-        @dependency
-        @cache
-        def random_int():
-            return random.random_int(1, 10)
-        ```
-
-    Notes:
-        - The constructor function should have no parameters
-        - For singleton dependencies, apply @cache before @dependency
-        - The resulting injector provides .inject, .faker, and .fake_value methods
 
     """
     return Injector(func)
@@ -226,7 +137,9 @@ if d.is_test_env():
 
         for i in range(3):
             headers = build_http_headers()
-            assert headers["Authorization"] == "Bearer test_token", f"Attempt {i}"
+            assert headers["Authorization"] == "Bearer test_token", (
+                f"Attempt {i}"
+            )
 
     def test_singleton_dependency() -> None:
         counter = 0
@@ -247,7 +160,9 @@ if d.is_test_env():
         assert read_counter() == 1, "must always return the same value"
         assert read_counter() == 1, "must always return the same value"
 
-        assert counter == 1, "constructor can only be called once"  # Constructor called only once
+        assert counter == 1, (
+            "constructor can only be called once"
+        )  # Constructor called only once
 
     # types and data for using random during tests
 
@@ -287,14 +202,23 @@ if d.is_test_env():
             return random_int
 
         # Test normal behavior
-        assert all(_NormalRange.START <= get_number() <= _NormalRange.END for _ in range(N_TRIALS))
+        assert all(
+            _NormalRange.START <= get_number() <= _NormalRange.END
+            for _ in range(N_TRIALS)
+        )
 
         # Test with faker
         with fake_random_int():
-            assert all(_TestRAnge.START <= get_number() <= _TestRAnge.END for _ in range(N_TRIALS))
+            assert all(
+                _TestRAnge.START <= get_number() <= _TestRAnge.END
+                for _ in range(N_TRIALS)
+            )
 
         # Test restoration after context
-        assert all(_NormalRange.START <= get_number() <= _NormalRange.END for _ in range(N_TRIALS))
+        assert all(
+            _NormalRange.START <= get_number() <= _NormalRange.END
+            for _ in range(N_TRIALS)
+        )
 
     def test_fake_value_context() -> None:
         @dependency
@@ -306,7 +230,10 @@ if d.is_test_env():
             return random_int
 
         # Test normal behavior
-        assert all(_NormalRange.START <= get_number() <= _NormalRange.END for _ in range(N_TRIALS))
+        assert all(
+            _NormalRange.START <= get_number() <= _NormalRange.END
+            for _ in range(N_TRIALS)
+        )
 
         # Test with fake value
         with random_int.fake_value(FAKE_INT) as fake_int:
@@ -314,7 +241,10 @@ if d.is_test_env():
             assert fake_int == FAKE_INT
 
         # Test restoration after context
-        assert all(_NormalRange.START <= get_number() <= _NormalRange.END for _ in range(N_TRIALS))
+        assert all(
+            _NormalRange.START <= get_number() <= _NormalRange.END
+            for _ in range(N_TRIALS)
+        )
 
     def test_multiple_fake_contexts() -> None:
         @dependency
@@ -332,7 +262,9 @@ if d.is_test_env():
         @random_int.inject
         @token.inject
         @api_base_url.inject
-        def get_random_user(base_url: str, token: str, random_int: int, name: str):
+        def get_random_user(
+            base_url: str, token: str, random_int: int, name: str,
+        ):
             return base_url, token, random_int, name
 
         with (
@@ -387,7 +319,10 @@ if d.is_test_env():
         def use_services(db_connection: str, logger: str) -> str:
             return f"Using {db_connection} with {logger}"
 
-        assert use_services() == "Using db_connection_instance with logger_instance"
+        assert (
+            use_services()
+            == "Using db_connection_instance with logger_instance"
+        )
 
     def test_dependency_replacement() -> None:
         @dependency
@@ -438,7 +373,9 @@ if d.is_test_env():
             results.append(get_number())
 
         number_of_threads = 10
-        threads = [threading.Thread(target=worker) for _ in range(number_of_threads)]
+        threads = [
+            threading.Thread(target=worker) for _ in range(number_of_threads)
+        ]
 
         for thread in threads:
             thread.start()
@@ -447,7 +384,10 @@ if d.is_test_env():
             thread.join()
 
         assert len(results) == number_of_threads
-        assert all(isinstance(num, int) and range_start <= num <= range_end for num in results)
+        assert all(
+            isinstance(num, int) and range_start <= num <= range_end
+            for num in results
+        )
 
     GT_TOKEN = uuid.uuid4().hex
     FAKE_1 = uuid.uuid4().hex

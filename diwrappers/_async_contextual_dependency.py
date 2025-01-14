@@ -8,7 +8,10 @@ from dataclasses import dataclass
 import diwrappers._commons._data as d
 import diwrappers._commons._exceptions as e
 
-type AsyncContextualConstructor[Data] = t.Callable[[], contextlib.AbstractAsyncContextManager[Data]]
+type AsyncContextualConstructor[Data] = t.Callable[
+    [],
+    contextlib.AbstractAsyncContextManager[Data],
+]
 
 
 @dataclass

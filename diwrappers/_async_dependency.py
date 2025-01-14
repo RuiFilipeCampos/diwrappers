@@ -39,7 +39,10 @@ class AsyncInjector[Data]:
 
     def inject[**TaskParams, TaskReturn](
         self,
-        task: t.Callable[t.Concatenate[Data, TaskParams], abc.Awaitable[TaskReturn]],
+        task: t.Callable[
+            t.Concatenate[Data, TaskParams],
+            abc.Awaitable[TaskReturn],
+        ],
     ) -> t.Callable[TaskParams, abc.Awaitable[TaskReturn]]:
         @functools.wraps(task)
         async def _wrapper(*args: TaskParams.args, **kwargs: TaskParams.kwargs):

@@ -6,7 +6,9 @@ class DependencyLeakError(DependencyInjectionError):
     """Raised when a dependency is returned or leaked from its context."""
 
     def __init__(self) -> None:
-        super().__init__("Dependency cannot be returned or leaked from its context")
+        super().__init__(
+            "Dependency cannot be returned or leaked from its context",
+        )
 
 
 class MissingContextError(DependencyInjectionError):
@@ -14,5 +16,6 @@ class MissingContextError(DependencyInjectionError):
 
     def __init__(self) -> None:
         super().__init__(
-            "Dependency injection requires an ensure context - please use ensure decorator",
+            "Dependency injection requires an ensure context"
+            "- please use ensure decorator",
         )

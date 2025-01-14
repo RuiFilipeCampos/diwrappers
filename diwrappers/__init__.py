@@ -2,7 +2,11 @@
 
 from ._asybc_contextual_dependency import async_contextual_dependency
 from ._async_dependency import async_dependency
-from ._commons._exceptions import DependencyInjectionError, DependencyLeakError, MissingContextError
+from ._commons._exceptions import (
+    DependencyInjectionError,
+    DependencyLeakError,
+    MissingContextError,
+)
 from ._contextual_dependency import contextual_dependency
 from ._dependency import dependency
 
