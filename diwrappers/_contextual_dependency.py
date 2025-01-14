@@ -6,28 +6,9 @@ import typing as t
 from dataclasses import dataclass
 
 import diwrappers._data as d
+import diwrappers._exceptions as e
 
 type ContextualConstructor[Data] = t.Callable[[], contextlib.AbstractContextManager[Data]]
-
-
-class DependencyInjectionError(Exception):
-    """Base exception for all dependency injection related errors."""
-
-
-class DependencyLeakError(DependencyInjectionError):
-    """Raised when a dependency is returned or leaked from its context."""
-
-    def __init__(self) -> None:
-        super().__init__("Dependency cannot be returned or leaked from its context")
-
-
-class MissingContextError(DependencyInjectionError):
-    """Raised when trying to inject a dependency without an ensure context."""
-
-    def __init__(self) -> None:
-        super().__init__(
-            "Dependency injection requires an ensure context - please use ensure decorator",
-        )
 
 
 @dataclass
@@ -47,7 +28,7 @@ class ContextualInjector[Data]:
                 self._data = data
                 res = fn(*args, **kwargs)
                 if d.contains_value(needle=data, haystack=res):
-                    raise DependencyLeakError
+                    raise e.DependencyLeakError
                 self._data = None
             return res
 
@@ -61,7 +42,7 @@ class ContextualInjector[Data]:
         def _wrapper(*args: TaskParams.args, **kwargs: TaskParams.kwargs):
             """Create and inject the dependency."""
             if self._data is None:
-                raise MissingContextError
+                raise e.MissingContextError
 
             return task(self._data, *args, **kwargs)
 
