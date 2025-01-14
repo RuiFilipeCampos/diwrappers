@@ -50,7 +50,7 @@ jobs:
       - # confirm above step
         run: ls
       - # wait 30s to ensure package is available in pypi 
-        run: sleep 30
+        run: sleep 60
       - run: |
           VERSION=${{ github.ref }}
           VERSION=$(echo $VERSION | sed 's/refs\/tags\/v//')
