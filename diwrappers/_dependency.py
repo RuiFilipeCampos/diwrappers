@@ -1,4 +1,5 @@
 import contextlib
+import diwrappers._data as d
 import enum
 import functools
 import os
@@ -202,8 +203,7 @@ def dependency[Data](func: t.Callable[[], Data]) -> Injector[Data]:
     return Injector(func)
 
 
-TEST_VAR_NAME = "DIWRAPPERS_TEST"
-if TEST_VAR_NAME in os.environ and os.environ[TEST_VAR_NAME] == "true":
+if d.is_test_env():
     import pytest
     # SECTION tests
 

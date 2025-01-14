@@ -4,6 +4,7 @@ import os
 import typing as t
 from collections import abc
 from dataclasses import dataclass
+import diwrappers._data as d
 
 
 @dataclass
@@ -55,8 +56,7 @@ def async_dependency[Data](
     return AsyncInjector(func)
 
 
-TEST_VAR_NAME = "DIWRAPPERS_TEST"
-if TEST_VAR_NAME in os.environ and os.environ[TEST_VAR_NAME] == "true":
+if d.is_test_env():
     import pytest
 
     GT_USER_ID = 1234

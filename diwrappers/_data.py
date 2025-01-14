@@ -1,4 +1,5 @@
 import typing as t
+import os
 
 
 def is_tuple(val: object) -> t.TypeGuard[tuple[object]]:
@@ -89,3 +90,11 @@ def is_dict(val: object) -> t.TypeGuard[dict[object, object]]:
 
     """
     return isinstance(val, dict)
+
+
+TEST_VAR_NAME = "DIWRAPPERS_TEST"
+""" Env variable that indicates if this is a test run """
+
+
+def is_test_env():
+    return TEST_VAR_NAME in os.environ and os.environ[TEST_VAR_NAME] == "true"
