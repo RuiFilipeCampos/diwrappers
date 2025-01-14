@@ -35,6 +35,9 @@ format = "ruff format diwrappers/*.py"
 type = "basedpyright diwrappers/*.py --level warning"
 sec = "bandit -r ./diwrappers --configfile ./bandit.yml"
 gha = "actionlint"
+doctest = "pytest --doctest-modules diwrappers/_contextual_dependency.py -vvvv"
+
+
 
 [tool.poe.tasks.test]
 cmd = "pytest diwrappers/*.py -vvvvv"
