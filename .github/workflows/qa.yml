@@ -22,6 +22,7 @@ jobs:
           python-version: "3.12"
       - uses: Gr1N/setup-poetry@v8
       - run: poetry install
+      - run: poetry run poe doctest
       - run: poetry run poe test
 
   lint:
