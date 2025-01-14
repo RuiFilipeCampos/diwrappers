@@ -5,21 +5,31 @@ import functools
 import typing as t
 from dataclasses import dataclass
 
+import diwrappers._data as d
+
 MAX_DEPTH = 5
 
-type ContextualConstructor[Data] = t.Callable[[], t.ContextManager[Data]]
+type ContextualConstructor[Data] = t.Callable[[], contextlib.AbstractContextManager[Data]]
 
 
-def is_tuple(val: object) -> t.TypeIs[tuple[object]]:
-    return isinstance(val, tuple)
+class DependencyInjectionError(Exception):
+    """Base exception for all dependency injection related errors."""
 
 
-def is_list(val: object) -> t.TypeIs[list[object]]:
-    return isinstance(val, list)
+class DependencyLeakError(DependencyInjectionError):
+    """Raised when a dependency is returned or leaked from its context."""
+
+    def __init__(self) -> None:
+        super().__init__("Dependency cannot be returned or leaked from its context")
 
 
-def is_dict(val: object) -> t.TypeIs[dict[object, object]]:
-    return isinstance(val, dict)
+class MissingContextError(DependencyInjectionError):
+    """Raised when trying to inject a dependency without an ensure context."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            "Dependency injection requires an ensure context - please use ensure decorator",
+        )
 
 
 def contains_value(needle: object, haystack: object, depth: int = 1) -> bool:
@@ -66,10 +76,10 @@ def contains_value(needle: object, haystack: object, depth: int = 1) -> bool:
 
     depth = depth + 1
 
-    if is_tuple(haystack) or is_list(haystack):
+    if d.is_tuple(haystack) or d.is_list(haystack):
         return any(contains_value(needle, item, depth=depth) for item in haystack)
 
-    if is_dict(haystack):
+    if d.is_dict(haystack):
         return any(
             contains_value(needle, k, depth=depth) or contains_value(needle, v, depth=depth)
             for k, v in haystack.items()
@@ -83,54 +93,7 @@ def contains_value(needle: object, haystack: object, depth: int = 1) -> bool:
 
 @dataclass
 class ContextualInjector[Data]:
-    """A dependency injector that manages contextual dependencies.
-
-    Examples:
-        >>> @dataclass
-        ... class Database:
-        ...     connection: str
-        ...
-        >>> @contextlib.contextmanager
-        ... def create_db():
-        ...     db = Database("test_connection")
-        ...     yield db
-        ...
-        >>> db_injector = contextual_dependency(create_db)
-        >>>
-        >>> @db_injector.ensure
-        ... def process_data():
-        ...     @db_injector.inject
-        ...     def _inner(db: Database):
-        ...         return f"Using {db.connection}"
-        ...     return _inner()
-        >>>
-        >>> process_data()
-        'Using test_connection'
-
-        Example showing error when returning injected dependency:
-            >>> @db_injector.ensure
-            ... def bad_function():
-            ...     @db_injector.inject
-            ...     def _inner(db: Database):
-            ...         return db  # This will raise an error
-            ...     return _inner()
-            >>> try:
-            ...     bad_function()
-            ... except RuntimeError:
-            ...     print("Caught expected RuntimeError")
-            Caught expected RuntimeError
-
-        Example showing error when using inject without ensure:
-            >>> @db_injector.inject
-            ... def standalone_function(db: Database):
-            ...     return f"Using {db.connection}"
-            >>> try:
-            ...     standalone_function()
-            ... except RuntimeError as e:
-            ...     print(str(e))
-            Please use ensure.
-
-    """
+    """A dependency injector that manages contextual dependencies."""
 
     _constructor: ContextualConstructor[Data]
     """Function that creates new instances of the dependency."""
@@ -138,29 +101,14 @@ class ContextualInjector[Data]:
     _data: Data | None = None
 
     def ensure[**P, R](self, fn: t.Callable[P, R]):
-        """Ensure that the dependency is available within the function scope.
-
-        >>> @dataclass
-        ... class Resource:
-        ...     name: str
-
-        >>> @contextlib.contextmanager
-        ... def create_resource():
-        ...     yield Resource("test")
-        >>> injector = contextual_dependency(create_resource)
-        >>> @injector.ensure
-        ... def use_resource():
-        ...     return "success"
-        >>> use_resource()
-        'success'
-        """
+        """Ensure that the dependency is available within the function scope."""
 
         def wrapper(*args: P.args, **kwargs: P.kwargs):
             with self._constructor() as data:
                 self._data = data
                 res = fn(*args, **kwargs)
                 if contains_value(needle=data, haystack=res):
-                    raise RuntimeError
+                    raise DependencyLeakError
                 self._data = None
             return res
 
@@ -174,8 +122,7 @@ class ContextualInjector[Data]:
         def _wrapper(*args: TaskParams.args, **kwargs: TaskParams.kwargs):
             """Create and inject the dependency."""
             if self._data is None:
-                msg = "Please use ensure."
-                raise RuntimeError(msg)
+                raise MissingContextError
 
             return task(self._data, *args, **kwargs)
 
@@ -198,6 +145,8 @@ if __name__ == "__main__":
         return db_conn
 
     @db_conn.ensure
+    def some_other_function(): ...
+
     def main():
         return do_work()
 
