@@ -5,8 +5,8 @@ import functools
 import typing as t
 from dataclasses import dataclass
 
-import diwrappers._data as d
-import diwrappers._exceptions as e
+import diwrappers._commons._data as d
+import diwrappers._commons._exceptions as e
 
 type ContextualConstructor[Data] = t.Callable[[], contextlib.AbstractContextManager[Data]]
 

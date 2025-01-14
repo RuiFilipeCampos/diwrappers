@@ -8,7 +8,7 @@ from collections import abc
 from dataclasses import dataclass
 from functools import cache
 
-import diwrappers._data as d
+import diwrappers._commons._data as d
 
 
 @dataclass
