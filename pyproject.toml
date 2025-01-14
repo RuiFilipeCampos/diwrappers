@@ -36,6 +36,7 @@ type = "basedpyright diwrappers/**/*.py --level warning"
 sec = "bandit -r ./diwrappers --configfile ./bandit.yml"
 gha = "actionlint"
 doctest = "pytest --doctest-modules diwrappers/**/*.py -vvvv"
+examples = "python -m examples"
 
 
 
