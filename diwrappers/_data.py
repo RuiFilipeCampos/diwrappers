@@ -1,5 +1,5 @@
-import typing as t
 import os
+import typing as t
 
 
 def is_tuple(val: object) -> t.TypeGuard[tuple[object]]:

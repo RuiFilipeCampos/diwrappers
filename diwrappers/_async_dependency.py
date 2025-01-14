@@ -1,9 +1,9 @@
 import contextlib
 import functools
-import os
 import typing as t
 from collections import abc
 from dataclasses import dataclass
+
 import diwrappers._data as d
 
 

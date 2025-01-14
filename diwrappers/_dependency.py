@@ -1,14 +1,14 @@
 import contextlib
-import diwrappers._data as d
 import enum
 import functools
-import os
 import random
 import typing as t
 import uuid
 from collections import abc
 from dataclasses import dataclass
 from functools import cache
+
+import diwrappers._data as d
 
 
 @dataclass
