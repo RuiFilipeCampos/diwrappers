@@ -47,7 +47,7 @@ jobs:
           python-version: "3.12"
       
       - name: Security scan
-        uses: anchore/scan-action@v3
+        uses: anchore/scan-action@1c57367e29d11f99ae56571e49f95f1a1991945e # v3.6.4 
         with:
           path: "."
           fail-build: true
