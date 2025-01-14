@@ -20,7 +20,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - uses: Gr1N/setup-poetry@v8
+      - uses: Gr1N/setup-poetry@15821dc8a61bc630db542ae4baf6a7c19a994844 # v8
       - run: poetry install
       - run: poetry run poe doctest
       - run: poetry run poe test
@@ -32,7 +32,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - uses: Gr1N/setup-poetry@v8
+      - uses: Gr1N/setup-poetry@15821dc8a61bc630db542ae4baf6a7c19a994844 # v8
       - run: poetry install
       - run: poetry run poe lint
 
@@ -54,7 +54,7 @@ jobs:
           severity-cutoff: high
           ignore-rules: "B311"
 
-      - uses: Gr1N/setup-poetry@v8
+      - uses: Gr1N/setup-poetry@15821dc8a61bc630db542ae4baf6a7c19a994844 # v8
       - run: poetry install
       - run: poetry run poe sec
 
