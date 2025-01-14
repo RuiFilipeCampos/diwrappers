@@ -1,0 +1,48 @@
+[tool.poetry]
+name = "example-project"
+version = "0.1.0"
+description = ""
+authors = ["Rui Campos <mail@ruicampos.org>"]
+readme = "README.md"
+package-mode = false
+
+[tool.poetry.dependencies]
+python = "^3.12"
+diwrappers = { path = ".." }
+sqlmodel = "^0.0.22"
+poethepoet = "^0.32.1"
+pydantic-settings = "^2.7.1"
+
+[tool.poetry.group.dev.dependencies]
+ruff = "^0.9.1"
+basedpyright = "^1.23.2"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+
+[tool.poe.tasks]
+lint = "ruff check *.py"
+format = "ruff format *.py"
+
+[tool.pyright]
+pythonVersion = "^3.12"
+typeCheckingMode = "basic"
+
+
+[tool.ruff.lint]
+select = ['ALL']
+ignore = [
+    'S311', # pRNG is only used for testing purposes
+    'S101',
+    'ANN202',
+    'TC003',
+    'D104',
+    'FA102',
+    'I001',
+    'ANN201',
+    'D101',
+    'D102',
+    'D103'
+]
