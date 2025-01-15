@@ -25,6 +25,8 @@ jobs:
           VERSION=${{ github.ref }}
           VERSION=$(echo $VERSION | sed 's/refs\/tags\/v//')
 
+  
+
           poetry --version
           poetry config pypi-token.pypi ${{ secrets.PYPI_TOKEN }}
           poetry version $VERSION
@@ -51,9 +53,11 @@ jobs:
         run: ls
       - # wait 30s to ensure package is available in pypi 
         run: sleep 60
-      - run: |
+      - working-directory: examples
+        run: |
           VERSION=${{ github.ref }}
           VERSION=$(echo $VERSION | sed 's/refs\/tags\/v//')
-          pip install diwrappers==$VERSION
-          python -m examples
+          poetry add diwrappers@$VERSION
+          poetry install
+          python __main__.py
 
