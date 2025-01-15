@@ -60,5 +60,5 @@ jobs:
           VERSION=$(echo $VERSION | sed 's/refs\/tags\/v//')
           poetry add diwrappers@$VERSION
           poetry install
-          python __main__.py
+          poetry run python __main__.py
 
