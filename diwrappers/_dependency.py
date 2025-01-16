@@ -12,25 +12,24 @@ import diwrappers._commons._data as d
 
 
 @dataclass
-class Injector[Data]:
-    """A dependency injection container.
+class Injector(t.Generic[d.Data]):
+    """
+    A dependency injection container.
 
     This class provides a flexible way to manage dependencies in your
     application, supporting both regular dependency injection and
     testing scenarios through context managers that allow temporary
     dependency replacement.
 
-    Type Parameters:
-        Data: The type of the dependency being managed by this injector.
-
     """
 
-    _constructor: t.Callable[[], Data]
+    _constructor: t.Callable[[], d.Data]
     """Function that creates new instances of the dependency."""
 
     @contextlib.contextmanager
-    def fake_value(self, val: Data) -> abc.Generator[Data, None, None]:
-        """Temporarily replace the dependency with a specific value.
+    def fake_value(self, val: d.Data) -> abc.Generator[d.Data, None, None]:
+        """
+        Temporarily replace the dependency with a specific value.
 
         Args:
             val: The value to use instead of the normal dependency.
@@ -46,8 +45,9 @@ class Injector[Data]:
         finally:
             self._constructor = tmp_constructor
 
-    def faker(self, fake_constructor: t.Callable[[], Data]):
-        """Create a context manager to replace the dependency constructor.
+    def faker(self, fake_constructor: t.Callable[[], d.Data]):
+        """
+        Create a context manager to replace the dependency constructor.
 
         Args:
             fake_constructor:
@@ -71,20 +71,17 @@ class Injector[Data]:
 
         return wrapper
 
-    def inject[**TaskParams, TaskReturn](
+    def inject(
         self,
-        task: t.Callable[t.Concatenate[Data, TaskParams], TaskReturn],
-    ) -> t.Callable[TaskParams, TaskReturn]:
-        """Decorate a function to inject the dependency as its first argument.
-
-        Type Parameters:
-            TaskParams: Type parameters for the decorated function's arguments
-            TaskReturn: Return type of the decorated function
+        task: t.Callable[t.Concatenate[d.Data, d.TaskParams], d.TaskReturn],
+    ) -> t.Callable[d.TaskParams, d.TaskReturn]:
+        """
+        Decorate a function to inject the dependency as its first argument.
 
         Args:
             task:
                 The function to be decorated.
-                Its first parameter must be of type Data.
+                Its first parameter must be of type d.Data.
 
         Returns:
             A wrapped function that will automatically
@@ -93,7 +90,7 @@ class Injector[Data]:
         """
 
         @functools.wraps(task)
-        def _wrapper(*args: TaskParams.args, **kwargs: TaskParams.kwargs):
+        def _wrapper(*args: d.TaskParams.args, **kwargs: d.TaskParams.kwargs):
             """Create and inject the dependency."""
             data = self._constructor()
             return task(data, *args, **kwargs)
@@ -101,11 +98,9 @@ class Injector[Data]:
         return _wrapper
 
 
-def dependency[Data](func: t.Callable[[], Data]) -> Injector[Data]:
-    """Create a dependency injector from a constructor function.
-
-    Type Parameters:
-        Data: The type of the dependency being created
+def dependency(func: t.Callable[[], d.Data]) -> Injector[d.Data]:
+    """
+    Create a dependency injector from a constructor function.
 
     Args:
         func: A constructor function that creates the dependency
@@ -114,7 +109,7 @@ def dependency[Data](func: t.Callable[[], Data]) -> Injector[Data]:
     return Injector(func)
 
 
-if d.is_test_env():
+if d.is_test_env():  # pragma: no cover
     import pytest
     # SECTION tests
 
@@ -263,7 +258,10 @@ if d.is_test_env():
         @token.inject
         @api_base_url.inject
         def get_random_user(
-            base_url: str, token: str, random_int: int, name: str,
+            base_url: str,
+            token: str,
+            random_int: int,
+            name: str,
         ):
             return base_url, token, random_int, name
 

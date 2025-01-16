@@ -1,9 +1,19 @@
 import os
 import typing as t
 
+Data = t.TypeVar("Data")
+""" The type of the dependency being managed by this injector."""
+
+TaskReturn = t.TypeVar("TaskReturn")
+""" Type parameters for the decorated function's arguments"""
+
+TaskParams = t.ParamSpec("TaskParams")
+"""Return type of the decorated function"""
+
 
 def is_tuple(val: object) -> t.TypeGuard[tuple[object]]:
-    """Check if a value is a tuple.
+    """
+    Check if a value is a tuple.
 
     Examples:
         >>> is_tuple((1, 2, 3))
@@ -32,7 +42,8 @@ def is_tuple(val: object) -> t.TypeGuard[tuple[object]]:
 
 
 def is_list(val: object) -> t.TypeGuard[list[object]]:
-    """Check if a value is a list.
+    """
+    Check if a value is a list.
 
     Examples:
         >>> is_list([1, 2, 3])
@@ -61,7 +72,8 @@ def is_list(val: object) -> t.TypeGuard[list[object]]:
 
 
 def is_dict(val: object) -> t.TypeGuard[dict[object, object]]:
-    """Check if a value is a dictionary.
+    """
+    Check if a value is a dictionary.
 
     Examples:
         >>> is_dict({"a": 1, "b": 2})
@@ -96,7 +108,8 @@ MAX_DEPTH = 5
 
 
 def contains_value(needle: object, haystack: object, depth: int = 1) -> bool:
-    """Check if needle exists within haystack, including in nested structures.
+    """
+    Check if needle exists within haystack, including in nested structures.
 
     Examples:
         >>> contains_value(5, 5)

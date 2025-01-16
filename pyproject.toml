@@ -12,7 +12,7 @@ classifiers = [
 repository = "https://github.com/ruifilipecampos/diwrappers"
 
 [tool.poetry.dependencies]
-python = "^3.12"
+python = ">=3.10"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.3.4"
@@ -21,8 +21,8 @@ basedpyright = "^1.23.2"
 pytest-asyncio = "^0.25.2"
 bandit = "^1.8.0"
 ruff = "^0.9.1"
-ruff-lsp = "^0.0.60"
 actionlint-py = "^1.7.6.22"
+pytest-cov = "^4.1.0"
 
 [build-system]
 requires = ["poetry-core"]
@@ -30,6 +30,9 @@ build-backend = "poetry.core.masonry.api"
 
 
 [tool.poe.tasks]
+all = ["sec","test", "static_check"]
+test = ["doctest", "unit_test"]
+static_check = ["lint", "format", "type"]
 lint = "ruff check diwrappers/**/*.py"
 format = "ruff format diwrappers/**/*.py"
 type = "basedpyright diwrappers/**/*.py --level warning"
@@ -39,9 +42,12 @@ doctest = "pytest --doctest-modules diwrappers/**/*.py -vvvv"
 examples = "python -m examples"
 
 
+[tool.poe.tasks.cov]
+cmd = "pytest diwrappers/**/*.py --cov=diwrappers --cov-report=term-missing --cov-report=html"
+env = { DIWRAPPERS_TEST="true" }
 
-[tool.poe.tasks.test]
-cmd = "pytest diwrappers/*.py -vvvvv"
+[tool.poe.tasks.unit_test]
+cmd = "pytest diwrappers/**/*.py -vvvvv"
 env = { DIWRAPPERS_TEST="true" }
 
 
@@ -53,9 +59,31 @@ select = ['ALL']
 ignore = [
     'S311', # pRNG is only used for testing purposes
     'S101',
-    'ANN202'
+    'ANN202',
+    "D212",
+    "D203",
+    "COM812"
 ]
 
 [tool.pyright]
-pythonVersion = "3.12"
+pythonVersion = "3.10"
 typeCheckingMode = "strict"
+
+
+[tool.coverage.run]
+branch = true
+source = ["diwrappers"]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "if self.debug:",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+    "if TYPE_CHECKING:",
+    "if d.is_test_env():",
+    "# SECTION tests",
+]
+fail_under = 90
+show_missing = true
