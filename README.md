@@ -1,17 +1,14 @@
-# DIWrappers
+# diwrappers: Modern Dependency Injection for Python
 
-A lightweight, type-safe dependency injection library for Python that supports synchronous, asynchronous, and contextual dependencies.
+diwrappers is a flexible, type-safe dependency injection framework for Python that supports both synchronous and asynchronous dependencies with contextual management.
 
 ## Features
 
-- Type-safe dependency injection with Python type hints
-- Three injection patterns:
-  - Regular dependencies (`@dependency`)
-  - Async dependencies (`@async_dependency`)
-  - Contextual dependencies (`@contextual_dependency`)
-- Testing utilities for mocking dependencies
-- Support for singleton dependencies via `@cache`
-- Minimal boilerplate and intuitive API
+- 🔄 **Sync & Async Support**: Handle both synchronous and asynchronous dependencies seamlessly
+- 🎯 **Type Safety**: Full typing support with generics for better IDE integration
+- 🔒 **Contextual Dependencies**: Manage resources with proper cleanup through context managers
+- 🧪 **Testing Utilities**: Built-in support for mocking and faking dependencies
+- 🧵 **Thread Safety**: Reliable behavior in multi-threaded environments
 
 ## Installation
 
@@ -19,7 +16,7 @@ A lightweight, type-safe dependency injection library for Python that supports s
 pip install diwrappers
 ```
 
-## Usage
+## Quick Start
 
 ### Basic Dependency Injection
 
@@ -27,40 +24,18 @@ pip install diwrappers
 from diwrappers import dependency
 
 @dependency
-def api_token() -> str:
-    return "your-api-token"
-
-@api_token.inject
-def make_request(api_token: str, endpoint: str):
-    return f"Calling {endpoint} with token {api_token}"
-
-# The api_token will be automatically injected
-result = make_request("/users")
-```
-
-### Async Dependencies
-
-For dependencies that require asynchronous initialization:
-
-```python
-from diwrappers import async_dependency
-
-@async_dependency
-async def database():
-    connection = await establish_db_connection()
-    return connection
+def database():
+    return Database("connection_string")
 
 @database.inject
-async def get_user(db, user_id: int):
-    return await db.query(f"SELECT * FROM users WHERE id = {user_id}")
+def get_user(db: Database, user_id: int):
+    return db.find_user(user_id)
 
-# Use with async/await
-user = await get_user(123)
+# Use the function without manually passing the database
+user = get_user(user_id=123)
 ```
 
 ### Contextual Dependencies
-
-For dependencies that need proper resource management:
 
 ```python
 from diwrappers import contextual_dependency
@@ -68,96 +43,183 @@ import contextlib
 
 @contextual_dependency
 @contextlib.contextmanager
-def db_transaction():
-    transaction = start_transaction()
+def database():
+    db = Database("connection_string")
     try:
-        yield transaction
-        transaction.commit()
-    except:
-        transaction.rollback()
-        raise
+        yield db
+    finally:
+        db.close()
 
-@db_transaction.inject
-def update_user(transaction, user_id: int, data: dict):
-    transaction.execute("UPDATE users SET ...", data)
+# Define functions that need the database
+@database.inject
+def get_user(db: Database, user_id: int):
+    return db.find_user(user_id)
 
-# Must be wrapped in ensure() to properly manage the context
-@db_transaction.ensure
-def main():
-    update_user(123, {"name": "New Name"})
+@database.inject
+def save_user(db: Database, user: User):
+    return db.save(user)
+
+# Ensure database context for a group of operations
+@database.ensure
+def process_user_data(user_id: int):
+    # Multiple database operations within the same context
+    user = get_user(user_id)
+    user.last_login = datetime.now()
+    save_user(user)
+    return user
+
+# Database connection is automatically managed
+user = process_user_data(user_id=123)
 ```
+
+### Async Support
+
+```python
+from diwrappers import async_dependency
+
+@async_dependency
+async def api_client():
+    client = ApiClient()
+    await client.connect()
+    return client
+
+@api_client.inject
+async def fetch_data(client: ApiClient, endpoint: str):
+    return await client.get(endpoint)
+
+# Use with async/await
+data = await fetch_data(endpoint="/users")
+```
+
+## Core Concepts
+
+### 1. Basic Dependencies
+
+The `@dependency` decorator creates injectors for regular dependencies:
+
+- Use `@dependency` to define a dependency
+- Use `.inject` to inject the dependency into functions
+- Use `.fake_value()` or `.faker()` for testing
+
+### 2. Contextual Dependencies
+
+Contextual dependencies provide resource management:
+
+- Use `@contextual_dependency` for dependencies needing cleanup
+- Use `.ensure` to create a context where the dependency is valid
+- Use `.inject` to use the dependency within that context
+
+### 3. Async Dependencies
+
+For asynchronous operations:
+
+- Use `@async_dependency` for async dependencies
+- Use `@async_contextual_dependency` for async contextual dependencies
+- All async dependencies work with `async/await` syntax
 
 ## Testing
 
-The library provides utilities for mocking dependencies in tests:
-
-### Using fake_value
+diwrappers provides robust testing utilities:
 
 ```python
 @dependency
-def current_time() -> float:
-    return time.time()
-
-# In tests
-with current_time.fake_value(1234567890.0):
-    assert get_timestamp() == 1234567890.0
-```
-
-### Using faker
-
-```python
-@dependency
-def random_id() -> str:
-    return str(uuid.uuid4())
-
-@random_id.faker
-def fixed_id():
-    return "test-id-123"
-
-# In tests
-with fixed_id():
-    assert create_resource().id == "test-id-123"
-```
-
-## Singleton Dependencies
-
-To create singleton dependencies that are cached for the lifetime of the program:
-
-```python
-from functools import cache
-
-@dependency
-@cache
 def config():
-    return load_config_from_file()
+    return {"env": "production"}
+
+@config.inject
+def get_environment(config: dict):
+    return config["env"]
+
+# Test using fake_value
+with config.fake_value({"env": "testing"}):
+    assert get_environment() == "testing"
+
+# Test using faker
+@config.faker
+def test_config():
+    return {"env": "testing"}
+
+with test_config():
+    assert get_environment() == "testing"
 ```
 
-## Type Safety
+## Error Handling
 
-The library leverages Python's type hints to ensure type safety:
+diwrappers provides clear error messages through custom exceptions:
 
-```python
-@dependency
-def logger() -> Logger:
-    return Logger()
-
-@logger.inject
-def process_data(logger: Logger, data: dict) -> None:
-    logger.info(f"Processing {data}")  # Type-checked by your IDE/mypy
-```
+- `DependencyInjectionError`: Base exception class
+- `DependencyLeakError`: Raised when dependencies escape their context
+- `MissingContextError`: Raised when using contextual dependencies without ensure
 
 ## Best Practices
 
-1. Keep dependency constructors simple and focused
-2. Use `@cache` for expensive-to-create dependencies that can be reused
-3. Prefer contextual dependencies for resources that need cleanup
-4. Always wrap contextual dependency usage with `ensure()`
-5. Use async dependencies for I/O-bound operations
+1. **Resource Management**
+   - Use contextual dependencies for resources requiring cleanup
+   - Always use `.ensure` with contextual dependencies
+   - Avoid returning dependencies from functions
 
-## Contributing
+2. **Testing**
+   - Use `.fake_value()` for simple value replacement
+   - Use `.faker()` for more complex fake implementations
+   - Test both success and error cases
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+3. **Type Safety**
+   - Always provide type hints for dependencies
+   - Use generics when creating reusable patterns
+   - Let your IDE help you with type checking
 
-## License
+## Advanced Usage
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+### Nested Dependencies
+
+```python
+@dependency
+def config():
+    return {"db_url": "postgresql://..."}
+
+@dependency
+@config.inject
+def database(config: dict):
+    return Database(config["db_url"])
+
+@database.inject
+def get_user(db: Database, user_id: int):
+    return db.find_user(user_id)
+```
+
+### Multiple Dependencies
+
+```python
+@dependency
+def logger():
+    return Logger()
+
+@dependency
+def database():
+    return Database()
+
+@logger.inject
+@database.inject
+def save_user(db: Database, logger: Logger, user: User):
+    logger.info(f"Saving user {user.id}")
+    db.save(user)
+```
+
+### Thread Safety
+
+The package is thread-safe by default:
+
+```python
+@dependency
+def counter():
+    return Counter()
+
+@counter.inject
+def increment(counter: Counter):
+    counter.increment()
+    return counter.value
+
+# Safe to use in multiple threads
+threads = [Thread(target=increment) for _ in range(10)]
+```
+
