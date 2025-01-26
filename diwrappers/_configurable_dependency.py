@@ -38,14 +38,21 @@ class ConfigurableInjector(t.Generic[InjectorConfig, d.Data]):
             The provided fake value.
 
         """
-        tmp_constructor = self._constructor
-        self._constructor = lambda: val
+        actual_constructor = self._constructor
+
+        def temp_constructor(
+            *_args: d.TaskParams.args,
+            **_kwargs: d.TaskParams.kwargs,
+        ):
+            return val
+
+        self._constructor = temp_constructor
         try:
             yield val
         finally:
-            self._constructor = tmp_constructor
+            self._constructor = actual_constructor
 
-    def faker(self, fake_constructor: t.Callable[[], d.Data]):
+    def faker(self, fake_constructor: t.Callable[InjectorConfig, d.Data]):
         """
         Create a context manager to replace the dependency constructor.
 
